@@ -1,0 +1,87 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  font-family: 'Noto Sans SC', sans-serif;
+}
+
+body {
+  background: linear-gradient(135deg, #FFF9C4 0%, #E3F2FD 100%);
+  min-height: 100vh;
+}
+
+/* 弹跳动画 */
+@keyframes bounce-in {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.1); }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* 答对星星飞出 */
+@keyframes star-fly {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}
+
+/* 答错抖动 */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-10px); }
+  40% { transform: translateX(10px); }
+  60% { transform: translateX(-8px); }
+  80% { transform: translateX(8px); }
+}
+
+/* 正确边框闪烁 */
+@keyframes correct-glow {
+  0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+  70% { box-shadow: 0 0 0 15px rgba(34, 197, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+.animate-correct-glow {
+  animation: correct-glow 0.6s ease-out;
+}
+
+/* 大号圆角按钮 */
+.btn-primary {
+  @apply px-8 py-4 rounded-3xl text-white font-bold text-xl shadow-lg 
+         transition-all duration-200 active:scale-95 hover:scale-105 hover:shadow-xl;
+}
+
+.btn-secondary {
+  @apply px-6 py-3 rounded-2xl font-bold text-lg shadow-md
+         transition-all duration-200 active:scale-95 hover:scale-105;
+}
+
+/* 选项卡片 */
+.option-card {
+  @apply rounded-3xl border-4 border-transparent cursor-pointer
+         transition-all duration-200 hover:scale-105 hover:shadow-lg
+         flex items-center justify-center select-none;
+}
+
+.option-card:active {
+  transform: scale(0.95);
+}
+
+.option-correct {
+  @apply border-green-400 bg-green-50;
+  animation: correct-glow 0.6s ease-out;
+}
+
+.option-wrong {
+  @apply border-red-400 bg-red-50;
+  animation: shake 0.4s ease-in-out;
+}

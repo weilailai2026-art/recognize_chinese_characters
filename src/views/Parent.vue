@@ -1,0 +1,193 @@
+<template>
+  <div class="min-h-screen p-4">
+    <!-- 头部 -->
+    <div class="flex items-center justify-between mb-6 max-w-2xl mx-auto">
+      <button @click="$router.push('/')" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">← 返回</button>
+      <h1 class="text-2xl font-black text-purple-600">👨‍👩‍👧 家长中心</h1>
+      <div class="w-12"></div>
+    </div>
+
+    <!-- Tab -->
+    <div class="flex gap-2 mb-6 max-w-2xl mx-auto">
+      <button
+        v-for="tab in tabs" :key="tab.key"
+        @click="activeTab = tab.key"
+        class="flex-1 py-2 rounded-2xl font-bold transition-all"
+        :class="activeTab === tab.key
+          ? 'bg-purple-500 text-white shadow-md'
+          : 'bg-white text-gray-400 border border-gray-200'"
+      >{{ tab.label }}</button>
+    </div>
+
+    <!-- 进度总览 -->
+    <div v-if="activeTab === 'progress'" class="max-w-2xl mx-auto">
+      <!-- 统计栏 -->
+      <div class="grid grid-cols-4 gap-2 mb-6">
+        <div v-for="s in statusList" :key="s.key"
+          class="rounded-2xl p-3 text-center shadow-sm cursor-pointer transition-all hover:scale-105"
+          :class="s.bg"
+          @click="filterStatus = filterStatus === s.key ? null : s.key"
+        >
+          <div class="text-2xl font-black" :class="s.textColor">{{ counts[s.key] }}</div>
+          <div class="text-xs" :class="s.textColor">{{ s.label }}</div>
+        </div>
+      </div>
+
+      <!-- 筛选提示 -->
+      <div v-if="filterStatus" class="mb-3 text-center">
+        <span class="bg-purple-100 text-purple-600 px-3 py-1 rounded-full text-sm font-bold">
+          筛选：{{ statusList.find(s => s.key === filterStatus)?.label }}
+          <button @click="filterStatus = null" class="ml-2">✕</button>
+        </span>
+      </div>
+
+      <!-- 字卡网格 -->
+      <div class="grid grid-cols-5 gap-2">
+        <div
+          v-for="c in filteredChars" :key="c.char"
+          class="rounded-2xl p-2 text-center cursor-pointer shadow-sm hover:scale-110 transition-all"
+          :class="getStatusBg(getCharStatus(c.char))"
+          @click="selectedChar = c"
+        >
+          <div class="text-2xl font-black">{{ c.char }}</div>
+          <div class="text-xs opacity-70">{{ c.pinyin }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 设置 -->
+    <div v-if="activeTab === 'settings'" class="max-w-md mx-auto bg-white rounded-3xl shadow-lg p-6">
+      <h3 class="text-xl font-black text-gray-700 mb-4">🔑 修改密码</h3>
+      <input
+        v-model="newPassword"
+        type="text"
+        maxlength="4"
+        pattern="[0-9]*"
+        placeholder="输入新的4位数字密码"
+        class="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-lg text-center tracking-widest mb-3 focus:outline-none focus:border-purple-400"
+      />
+      <button @click="changePassword" class="w-full btn-primary bg-purple-500 mb-6">保存密码</button>
+
+      <h3 class="text-xl font-black text-gray-700 mb-2">⚠️ 重置进度</h3>
+      <p class="text-gray-400 text-sm mb-3">清除所有答题记录，重新开始</p>
+      <button @click="confirmReset = true" class="w-full btn-secondary bg-red-100 text-red-500 border-2 border-red-200">
+        🗑️ 重置所有进度
+      </button>
+
+      <!-- 重置确认 -->
+      <div v-if="confirmReset" class="mt-4 bg-red-50 rounded-2xl p-4 text-center">
+        <p class="text-red-600 font-bold mb-3">确定要清空所有进度吗？</p>
+        <div class="flex gap-2">
+          <button @click="doReset" class="flex-1 btn-secondary bg-red-500 text-white">确定清空</button>
+          <button @click="confirmReset = false" class="flex-1 btn-secondary bg-gray-100 text-gray-500">取消</button>
+        </div>
+      </div>
+
+      <div v-if="settingMsg" class="mt-3 text-center text-green-500 font-bold">{{ settingMsg }}</div>
+    </div>
+
+    <!-- 字详情弹窗 -->
+    <div v-if="selectedChar" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="selectedChar = null">
+      <div class="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+        <div class="text-center mb-4">
+          <div class="text-8xl font-black text-gray-800">{{ selectedChar.char }}</div>
+          <div class="text-xl text-blue-400 font-bold">{{ selectedChar.pinyin }}</div>
+          <div class="text-4xl mt-1">{{ selectedChar.emoji }}</div>
+        </div>
+        <div class="mb-4">
+          <span class="inline-block px-3 py-1 rounded-full font-bold text-sm"
+            :class="getStatusBg(getCharStatus(selectedChar.char))">
+            {{ statusLabel(getCharStatus(selectedChar.char)) }}
+          </span>
+        </div>
+        <div class="text-sm text-gray-500">
+          <div class="flex justify-between py-1 border-b border-gray-100">
+            <span>答对次数</span>
+            <span class="font-bold text-green-500">{{ charProgress(selectedChar.char).correct }}</span>
+          </div>
+          <div class="flex justify-between py-1">
+            <span>答错次数</span>
+            <span class="font-bold text-red-400">{{ charProgress(selectedChar.char).wrong }}</span>
+          </div>
+        </div>
+        <button @click="selectedChar = null" class="mt-4 w-full btn-secondary bg-gray-100 text-gray-500">关闭</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue'
+import { characters } from '../data/characters'
+import { getCharStatus, getProgress, resetProgress, getSettings, saveSettings } from '../utils/storage'
+
+const activeTab = ref('progress')
+const filterStatus = ref(null)
+const selectedChar = ref(null)
+const confirmReset = ref(false)
+const settingMsg = ref('')
+const newPassword = ref('')
+
+const tabs = [
+  { key: 'progress', label: '📊 学习进度' },
+  { key: 'settings', label: '⚙️ 设置' },
+]
+
+const statusList = [
+  { key: 'mastered', label: '已掌握', bg: 'bg-green-100', textColor: 'text-green-600' },
+  { key: 'review', label: '需复习', bg: 'bg-yellow-100', textColor: 'text-yellow-600' },
+  { key: 'strengthen', label: '需强化', bg: 'bg-red-100', textColor: 'text-red-600' },
+  { key: 'unlearned', label: '未学过', bg: 'bg-gray-100', textColor: 'text-gray-500' },
+]
+
+const counts = computed(() => {
+  const c = { mastered: 0, review: 0, strengthen: 0, unlearned: 0 }
+  characters.forEach(ch => { c[getCharStatus(ch.char)]++ })
+  return c
+})
+
+const filteredChars = computed(() => {
+  if (!filterStatus.value) return characters
+  return characters.filter(c => getCharStatus(c.char) === filterStatus.value)
+})
+
+function getStatusBg(status) {
+  const map = {
+    mastered: 'bg-green-100 text-green-700',
+    review: 'bg-yellow-100 text-yellow-700',
+    strengthen: 'bg-red-100 text-red-700',
+    unlearned: 'bg-gray-100 text-gray-500',
+  }
+  return map[status] || map.unlearned
+}
+
+function statusLabel(status) {
+  const map = { mastered: '✅ 已掌握', review: '🟡 需复习', strengthen: '🔴 需强化', unlearned: '⬜ 未学过' }
+  return map[status] || '未学过'
+}
+
+function charProgress(char) {
+  const p = getProgress()
+  return p[char] || { correct: 0, wrong: 0 }
+}
+
+function changePassword() {
+  if (!/^\d{4}$/.test(newPassword.value)) {
+    settingMsg.value = '请输入4位数字密码'
+    return
+  }
+  const s = getSettings()
+  s.password = newPassword.value
+  saveSettings(s)
+  settingMsg.value = '密码已保存 ✅'
+  newPassword.value = ''
+  setTimeout(() => { settingMsg.value = '' }, 2000)
+}
+
+function doReset() {
+  resetProgress()
+  confirmReset.value = false
+  settingMsg.value = '进度已重置 ✅'
+  setTimeout(() => { settingMsg.value = '' }, 2000)
+}
+</script>
