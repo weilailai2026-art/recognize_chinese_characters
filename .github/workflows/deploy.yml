@@ -1,28 +1,12 @@
-name: Deploy to Cloudflare Pages
+# Cloudflare Pages 已配置自动构建，此 workflow 暂时禁用
+# 如需启用 GitHub Actions 部署，取消注释并配置 Secrets
+name: Disabled
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  placeholder:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=recognize-chinese-characters
+      - run: echo "Use Cloudflare Pages auto-deploy instead"
