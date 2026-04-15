@@ -3,6 +3,7 @@ import { currentUser } from './auth'
 
 const STORAGE_KEY = 'hanzi_progress'
 const SETTINGS_KEY = 'hanzi_settings'
+const GAME_STATS_KEY = 'hanzi_game_stats'
 
 // ==================== 进度管理（本地 + 云端同步）====================
 
@@ -13,6 +14,21 @@ export function getProgress() {
   } catch {
     return {}
   }
+}
+
+export function getGameStats() {
+  try {
+    return JSON.parse(localStorage.getItem(GAME_STATS_KEY) || '{"playedGames":0}')
+  } catch {
+    return { playedGames: 0 }
+  }
+}
+
+export function recordGamePlayed() {
+  const stats = getGameStats()
+  const next = { ...stats, playedGames: (stats.playedGames || 0) + 1 }
+  localStorage.setItem(GAME_STATS_KEY, JSON.stringify(next))
+  return next
 }
 
 // 从云端同步进度到本地
@@ -42,7 +58,6 @@ export async function syncProgressFromCloud() {
 
 // 记录答题结果（本地立即更新，云端异步同步）
 export async function recordAnswer(char, correct) {
-  // 1. 本地立即更新
   const progress = getProgress()
   if (!progress[char]) {
     progress[char] = { correct: 0, wrong: 0, history: [] }
@@ -58,7 +73,6 @@ export async function recordAnswer(char, correct) {
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(progress))
 
-  // 2. 云端异步同步（已登录才同步）
   if (currentUser.value) {
     supabase.from('user_progress').upsert({
       user_id: currentUser.value.id,
@@ -84,6 +98,14 @@ export function getCharStatus(char) {
   return 'review'
 }
 
+export function getCounts(characters) {
+  const counts = { mastered: 0, review: 0, strengthen: 0, unlearned: 0 }
+  characters.forEach(ch => {
+    counts[getCharStatus(ch.char)]++
+  })
+  return counts
+}
+
 // 获取状态颜色class
 export function getStatusColor(status) {
   const map = {
@@ -98,6 +120,7 @@ export function getStatusColor(status) {
 // 重置所有进度
 export async function resetProgress() {
   localStorage.removeItem(STORAGE_KEY)
+  localStorage.removeItem(GAME_STATS_KEY)
   if (currentUser.value) {
     await supabase
       .from('user_progress')
@@ -110,9 +133,9 @@ export async function resetProgress() {
 
 export function getSettings() {
   try {
-    return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{"password":"1234"}')
+    return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{"password":"1234","sound":true}')
   } catch {
-    return { password: '1234' }
+    return { password: '1234', sound: true }
   }
 }
 
