@@ -86,6 +86,7 @@
 - `24a9c28 feat: 家长中心支持按关卡筛选进度`
 - `8f531a2 feat: 首页增加今日推荐练习`
 - `d700322 docs: 完善项目 README 与开发说明`
+- `f37be3b chore: 使用环境变量配置 Supabase`
 
 ---
 
@@ -145,6 +146,16 @@ npm run build
 ```bash
 npm run preview
 ```
+
+---
+
+## 部署说明
+
+当前线上部署使用 **Cloudflare Pages 自动构建**。
+
+详细部署步骤、环境变量配置、排查清单见：
+
+- [DEPLOY.md](./DEPLOY.md)
 
 ---
 
@@ -220,8 +231,8 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 ### 建议
 后续更稳妥的做法：
 - 区分开发 / 生产环境变量
-- 增加部署平台（如 Cloudflare Pages）的环境变量说明
 - 避免把真实私密配置提交进仓库
+- 部署平台统一管理生产环境变量
 
 ---
 
@@ -231,7 +242,6 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 - 增加首页“今日任务完成度”
 - 增加关卡完成后的引导（自动推荐下一关）
 - 给家长中心增加按关卡统计图
-- 增加部署环境变量配置说明
 
 ### P2
 - 增加音效开关入口
@@ -262,6 +272,7 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 2. `npm run build`
 3. `git commit`
 4. `git push origin main`
-5. 更新 README 中的关键功能说明（如果有明显产品变化）
+5. 更新 README / DEPLOY 文档中的关键说明（如果有明显产品变化）
 
 这样后续接手成本最低。
+
