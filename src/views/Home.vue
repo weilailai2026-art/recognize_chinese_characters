@@ -20,8 +20,13 @@
       </div>
     </div>
 
-    <div v-if="isLoggedIn" class="absolute top-4 left-4 text-xs text-green-500 bg-green-50 rounded-xl px-3 py-1 font-bold">
-      ☁️ 进度云同步中
+    <div class="absolute top-4 left-4 flex flex-col gap-2">
+      <div v-if="isLoggedIn" class="text-xs text-green-500 bg-green-50 rounded-xl px-3 py-1 font-bold">
+        ☁️ 进度云同步中
+      </div>
+      <div v-if="!soundEnabled" class="text-xs text-gray-500 bg-white/90 rounded-xl px-3 py-1 font-bold shadow-sm">
+        🔇 当前已静音，可在家长中心开启声音
+      </div>
     </div>
 
     <div class="text-center mb-6 animate-bounce-in">
@@ -226,7 +231,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { characters, levels, getLevelMeta } from '../data/characters'
-import { getCharStatus, getCounts, syncProgressFromCloud } from '../utils/storage'
+import { getCharStatus, getCounts, getSettings, syncProgressFromCloud } from '../utils/storage'
 import { currentUser, isLoggedIn, signOut } from '../utils/auth'
 import {
   consumeRecentAchievement,
@@ -253,6 +258,7 @@ const appState = ref(getAppState())
 const checkin = ref(getCheckinData())
 const achievements = ref(getAchievements())
 const showOnboarding = ref(!appState.value.onboardingDone)
+const soundEnabled = computed(() => getSettings().sound !== false)
 
 const total = characters.length
 const selectedLevel = computed(() => appState.value.selectedLevel || 'starter')
