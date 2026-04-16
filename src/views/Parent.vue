@@ -22,7 +22,6 @@
 
     <!-- 进度总览 -->
     <div v-if="activeTab === 'progress'" class="max-w-2xl mx-auto">
-      <!-- 关卡总览 -->
       <div class="mb-4 bg-white rounded-3xl shadow-sm p-4">
         <div class="flex items-center justify-between mb-3">
           <h3 class="text-sm font-black text-gray-700">关卡总览</h3>
@@ -58,7 +57,6 @@
         </div>
       </div>
 
-      <!-- 关卡筛选 -->
       <div class="mb-4 bg-white rounded-3xl shadow-sm p-4">
         <div class="flex items-center justify-between mb-3">
           <h3 class="text-sm font-black text-gray-700">按关卡查看</h3>
@@ -84,7 +82,6 @@
         </div>
       </div>
 
-      <!-- 统计栏 -->
       <div class="grid grid-cols-4 gap-2 mb-3">
         <div
           v-for="s in statusList"
@@ -102,7 +99,6 @@
         当前范围：{{ selectedLevelMeta?.name || '全部关卡' }} · 共 {{ scopedCharacters.length }} 个汉字
       </p>
 
-      <!-- 筛选提示 -->
       <div v-if="filterStatus" class="mb-3 text-center">
         <span class="bg-purple-100 text-purple-600 px-3 py-1 rounded-full text-sm font-bold">
           筛选：{{ statusList.find(s => s.key === filterStatus)?.label }}
@@ -110,7 +106,6 @@
         </span>
       </div>
 
-      <!-- 字卡网格 -->
       <div class="grid grid-cols-5 gap-2">
         <div
           v-for="c in filteredChars"
@@ -131,6 +126,21 @@
 
     <!-- 设置 -->
     <div v-if="activeTab === 'settings'" class="max-w-md mx-auto bg-white rounded-3xl shadow-lg p-6">
+      <h3 class="text-xl font-black text-gray-700 mb-4">🔊 学习声音</h3>
+      <div class="flex items-center justify-between rounded-2xl border border-gray-200 px-4 py-3 mb-6">
+        <div>
+          <div class="font-bold text-gray-700">发音与答题音效</div>
+          <div class="text-sm text-gray-400">关闭后将不再播放读音和对错提示音</div>
+        </div>
+        <button
+          @click="toggleSound"
+          class="px-4 py-2 rounded-2xl font-bold transition-all"
+          :class="settings.sound ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'"
+        >
+          {{ settings.sound ? '已开启' : '已关闭' }}
+        </button>
+      </div>
+
       <h3 class="text-xl font-black text-gray-700 mb-4">🔑 修改密码</h3>
       <input
         v-model="newPassword"
@@ -159,7 +169,6 @@
       <div v-if="settingMsg" class="mt-3 text-center text-green-500 font-bold">{{ settingMsg }}</div>
     </div>
 
-    <!-- 字详情弹窗 -->
     <div v-if="selectedChar" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="selectedChar = null">
       <div class="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
         <div class="text-center mb-4">
@@ -204,6 +213,7 @@ const selectedChar = ref(null)
 const confirmReset = ref(false)
 const settingMsg = ref('')
 const newPassword = ref('')
+const settings = ref(getSettings())
 
 const tabs = [
   { key: 'progress', label: '📊 学习进度' },
@@ -293,14 +303,26 @@ function charProgress(char) {
   return p[char] || { correct: 0, wrong: 0 }
 }
 
+function toggleSound() {
+  settings.value = {
+    ...settings.value,
+    sound: !settings.value.sound,
+  }
+  saveSettings(settings.value)
+  settingMsg.value = settings.value.sound ? '声音已开启 ✅' : '声音已关闭 ✅'
+  setTimeout(() => {
+    settingMsg.value = ''
+  }, 2000)
+}
+
 function changePassword() {
   if (!/^\d{4}$/.test(newPassword.value)) {
     settingMsg.value = '请输入4位数字密码'
     return
   }
-  const s = getSettings()
-  s.password = newPassword.value
-  saveSettings(s)
+  const next = { ...settings.value, password: newPassword.value }
+  settings.value = next
+  saveSettings(next)
   settingMsg.value = '密码已保存 ✅'
   newPassword.value = ''
   setTimeout(() => {

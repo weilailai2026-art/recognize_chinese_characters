@@ -7,7 +7,6 @@ const GAME_STATS_KEY = 'hanzi_game_stats'
 
 // ==================== 进度管理（本地 + 云端同步）====================
 
-// 获取所有进度（优先本地缓存，快速响应）
 export function getProgress() {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
@@ -31,7 +30,6 @@ export function recordGamePlayed() {
   return next
 }
 
-// 从云端同步进度到本地
 export async function syncProgressFromCloud() {
   if (!currentUser.value) return
   try {
@@ -56,7 +54,6 @@ export async function syncProgressFromCloud() {
   }
 }
 
-// 记录答题结果（本地立即更新，云端异步同步）
 export async function recordAnswer(char, correct) {
   const progress = getProgress()
   if (!progress[char]) {
@@ -87,7 +84,6 @@ export async function recordAnswer(char, correct) {
   }
 }
 
-// 获取单字状态
 export function getCharStatus(char) {
   const progress = getProgress()
   const data = progress[char]
@@ -106,7 +102,6 @@ export function getCounts(characters) {
   return counts
 }
 
-// 获取状态颜色class
 export function getStatusColor(status) {
   const map = {
     unlearned: 'bg-gray-200 text-gray-500',
@@ -117,7 +112,6 @@ export function getStatusColor(status) {
   return map[status] || map.unlearned
 }
 
-// 重置所有进度
 export async function resetProgress() {
   localStorage.removeItem(STORAGE_KEY)
   localStorage.removeItem(GAME_STATS_KEY)
@@ -141,4 +135,8 @@ export function getSettings() {
 
 export function saveSettings(settings) {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
+}
+
+export function isSoundEnabled() {
+  return getSettings().sound !== false
 }
