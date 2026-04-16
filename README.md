@@ -85,6 +85,7 @@
 - `fa8c863 feat: 接入游戏打卡与成就结算`
 - `24a9c28 feat: 家长中心支持按关卡筛选进度`
 - `8f531a2 feat: 首页增加今日推荐练习`
+- `d700322 docs: 完善项目 README 与开发说明`
 
 ---
 
@@ -104,6 +105,21 @@
 
 ```bash
 npm install
+```
+
+### 配置环境变量
+
+先复制示例配置：
+
+```bash
+cp .env.example .env
+```
+
+然后根据你的环境修改：
+
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 ### 启动开发环境
@@ -188,23 +204,24 @@ src/
 
 ## Supabase 说明
 
-当前项目直接在前端初始化 Supabase：
+当前项目通过环境变量初始化 Supabase：
 - 文件：`src/lib/supabase.js`
+- 示例配置：`.env.example`
 
-当前使用的是公开可用的 publishable key。
-
-### 建议
-后续更稳妥的做法：
-- 把 Supabase URL / key 抽到环境变量
-- 增加 `.env.example`
-- 避免把环境配置硬编码进仓库
-
-例如未来可改成：
+使用方式：
 
 ```js
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 ```
+
+如果未配置环境变量，项目会在启动时报错，避免在错误配置下静默运行。
+
+### 建议
+后续更稳妥的做法：
+- 区分开发 / 生产环境变量
+- 增加部署平台（如 Cloudflare Pages）的环境变量说明
+- 避免把真实私密配置提交进仓库
 
 ---
 
@@ -214,6 +231,7 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 - 增加首页“今日任务完成度”
 - 增加关卡完成后的引导（自动推荐下一关）
 - 给家长中心增加按关卡统计图
+- 增加部署环境变量配置说明
 
 ### P2
 - 增加音效开关入口
@@ -232,6 +250,7 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 - README 之前是 Vite 默认模板，现已补成项目说明
 - 浏览器自动化验证在当前执行环境里受限，主要依赖 `npm run build` 做快速回归
 - Git 推送链路已经切换为 SSH，可继续直接提交 / 推送
+- 生产环境部署时需要同步配置 `VITE_SUPABASE_URL` 与 `VITE_SUPABASE_ANON_KEY`
 
 ---
 
