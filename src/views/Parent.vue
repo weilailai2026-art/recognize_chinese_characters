@@ -22,6 +22,42 @@
 
     <!-- 进度总览 -->
     <div v-if="activeTab === 'progress'" class="max-w-2xl mx-auto">
+      <!-- 关卡总览 -->
+      <div class="mb-4 bg-white rounded-3xl shadow-sm p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-black text-gray-700">关卡总览</h3>
+          <span class="text-xs text-gray-400">看每关掌握情况</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <button
+            v-for="level in levelSummaries"
+            :key="level.key"
+            @click="selectedLevel = level.key"
+            class="rounded-3xl border p-4 text-left transition-all hover:scale-[1.01]"
+            :class="selectedLevel === level.key
+              ? 'border-purple-500 bg-purple-50'
+              : 'border-gray-200 bg-white'"
+          >
+            <div class="flex items-center justify-between mb-2">
+              <div class="font-black text-gray-800">{{ level.emoji }} {{ level.name }}</div>
+              <div class="text-xs font-bold px-2 py-1 rounded-full"
+                   :class="level.ratio >= 0.8 ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'">
+                {{ Math.round(level.ratio * 100) }}%
+              </div>
+            </div>
+            <div class="text-xs text-gray-500 mb-2">已掌握 {{ level.mastered }}/{{ level.total }}</div>
+            <div class="h-2 rounded-full bg-gray-100 overflow-hidden mb-2">
+              <div class="h-full bg-gradient-to-r from-purple-400 to-indigo-500" :style="{ width: (level.ratio * 100) + '%' }"></div>
+            </div>
+            <div class="flex flex-wrap gap-2 text-[11px] text-gray-500">
+              <span class="px-2 py-1 rounded-full bg-green-50 text-green-600 font-bold">掌握 {{ level.counts.mastered }}</span>
+              <span class="px-2 py-1 rounded-full bg-yellow-50 text-yellow-600 font-bold">复习 {{ level.counts.review }}</span>
+              <span class="px-2 py-1 rounded-full bg-red-50 text-red-600 font-bold">强化 {{ level.counts.strengthen }}</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
       <!-- 关卡筛选 -->
       <div class="mb-4 bg-white rounded-3xl shadow-sm p-4">
         <div class="flex items-center justify-between mb-3">
@@ -112,7 +148,6 @@
         🗑️ 重置所有进度
       </button>
 
-      <!-- 重置确认 -->
       <div v-if="confirmReset" class="mt-4 bg-red-50 rounded-2xl p-4 text-center">
         <p class="text-red-600 font-bold mb-3">确定要清空所有进度吗？</p>
         <div class="flex gap-2">
@@ -198,6 +233,29 @@ const counts = computed(() => {
     c[getCharStatus(ch.char)]++
   })
   return c
+})
+
+const levelSummaries = computed(() => {
+  return levels.map(level => {
+    const chars = characters.filter(item => item.level === level.key)
+    const levelCounts = { mastered: 0, review: 0, strengthen: 0, unlearned: 0 }
+
+    chars.forEach(ch => {
+      levelCounts[getCharStatus(ch.char)]++
+    })
+
+    const total = chars.length || 1
+    const mastered = levelCounts.mastered
+    const ratio = mastered / total
+
+    return {
+      ...level,
+      total: chars.length,
+      mastered,
+      ratio,
+      counts: levelCounts,
+    }
+  })
 })
 
 const filteredChars = computed(() => {
