@@ -71,6 +71,34 @@
       </div>
     </div>
 
+    <div class="w-full max-w-md mb-6 bg-white rounded-3xl shadow-lg p-5 border border-orange-100">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <div class="text-sm text-orange-400 font-black mb-1">✨ 今日推荐练习</div>
+          <div class="text-lg font-black text-gray-800">{{ recommendedPlan.title }}</div>
+        </div>
+        <div class="text-3xl">{{ recommendedPlan.emoji }}</div>
+      </div>
+      <p class="text-sm text-gray-500 mb-4">{{ recommendedPlan.description }}</p>
+      <div class="flex items-center gap-2 text-xs mb-4 flex-wrap">
+        <span class="px-3 py-1 rounded-full bg-orange-50 text-orange-500 font-bold">
+          当前关卡：{{ selectedLevelMeta?.name || '启蒙级' }}
+        </span>
+        <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-500 font-bold">
+          推荐题数：{{ recommendedQuestionCount }} 题
+        </span>
+      </div>
+      <button
+        @click="startGame(recommendedPlan.mode)"
+        class="w-full btn-primary text-center"
+        :class="recommendedPlan.mode === 'review'
+          ? 'bg-gradient-to-r from-blue-400 to-purple-500'
+          : 'bg-gradient-to-r from-orange-400 to-pink-500'"
+      >
+        {{ recommendedPlan.buttonText }}
+      </button>
+    </div>
+
     <div class="w-full max-w-md mb-6">
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-lg font-black text-gray-700">选择学习关卡</h2>
@@ -180,7 +208,9 @@ const showOnboarding = ref(!appState.value.onboardingDone)
 const total = characters.length
 const selectedLevel = computed(() => appState.value.selectedLevel || 'starter')
 const selectedLevelMeta = computed(() => getLevelMeta(selectedLevel.value))
-const selectedLevelCount = computed(() => characters.filter(item => item.level === selectedLevel.value).length)
+const selectedLevelChars = computed(() => characters.filter(item => item.level === selectedLevel.value))
+const selectedLevelCount = computed(() => selectedLevelChars.value.length)
+const selectedLevelStats = computed(() => getCounts(selectedLevelChars.value))
 
 const userEmail = computed(() => currentUser.value?.email?.split('@')[0] || '')
 const stats = computed(() => getCounts(characters))
@@ -193,6 +223,52 @@ const levelProgressWidth = computed(() => {
   const current = Math.max(stats.value.mastered - prevThreshold, 0)
   return Math.min((current / span) * 100, 100)
 })
+
+const recommendedPlan = computed(() => {
+  const levelName = selectedLevelMeta.value?.name || '当前关卡'
+  const levelStats = selectedLevelStats.value
+  const reviewTotal = levelStats.review + levelStats.strengthen
+
+  if (levelStats.strengthen > 0) {
+    return {
+      mode: 'review',
+      emoji: '🚑',
+      title: `先补强 ${levelName}`,
+      description: `这个关卡还有 ${levelStats.strengthen} 个汉字需要重点强化，先把容易错的字补起来更划算。`,
+      buttonText: `优先补强（${reviewTotal}）`,
+    }
+  }
+
+  if (reviewTotal > 0) {
+    return {
+      mode: 'review',
+      emoji: '📘',
+      title: `先复习 ${levelName}`,
+      description: `这个关卡还有 ${reviewTotal} 个汉字待复习，先巩固再学新字，记得更稳。`,
+      buttonText: `开始复习（${reviewTotal}）`,
+    }
+  }
+
+  if (levelStats.unlearned > 0) {
+    return {
+      mode: 'normal',
+      emoji: '🌱',
+      title: `继续解锁 ${levelName}`,
+      description: `这个关卡还有 ${levelStats.unlearned} 个汉字还没学过，适合继续往前推进。`,
+      buttonText: '学习新字',
+    }
+  }
+
+  return {
+    mode: 'normal',
+    emoji: '🏆',
+    title: `${levelName} 已完成得不错`,
+    description: '当前关卡已经比较稳了，可以再来一轮巩固手感，或者切换到下一个关卡。',
+    buttonText: '再练一轮',
+  }
+})
+
+const recommendedQuestionCount = computed(() => Math.min(selectedLevelCount.value || 0, 5))
 
 function selectLevel(level) {
   if (!level.unlocked) {
