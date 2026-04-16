@@ -10,7 +10,8 @@
     <!-- Tab -->
     <div class="flex gap-2 mb-6 max-w-2xl mx-auto">
       <button
-        v-for="tab in tabs" :key="tab.key"
+        v-for="tab in tabs"
+        :key="tab.key"
         @click="activeTab = tab.key"
         class="flex-1 py-2 rounded-2xl font-bold transition-all"
         :class="activeTab === tab.key
@@ -21,9 +22,37 @@
 
     <!-- 进度总览 -->
     <div v-if="activeTab === 'progress'" class="max-w-2xl mx-auto">
+      <!-- 关卡筛选 -->
+      <div class="mb-4 bg-white rounded-3xl shadow-sm p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-black text-gray-700">按关卡查看</h3>
+          <span class="text-xs text-gray-400">当前：{{ selectedLevelMeta?.name || '全部关卡' }}</span>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button
+            @click="selectedLevel = 'all'"
+            class="px-3 py-2 rounded-2xl text-sm font-bold transition-all border"
+            :class="selectedLevel === 'all'
+              ? 'bg-purple-500 text-white border-purple-500'
+              : 'bg-gray-50 text-gray-500 border-gray-200'"
+          >全部</button>
+          <button
+            v-for="level in levels"
+            :key="level.key"
+            @click="selectedLevel = level.key"
+            class="px-3 py-2 rounded-2xl text-sm font-bold transition-all border"
+            :class="selectedLevel === level.key
+              ? 'bg-purple-500 text-white border-purple-500'
+              : 'bg-white text-gray-600 border-gray-200'"
+          >{{ level.emoji }} {{ level.name }}</button>
+        </div>
+      </div>
+
       <!-- 统计栏 -->
-      <div class="grid grid-cols-4 gap-2 mb-6">
-        <div v-for="s in statusList" :key="s.key"
+      <div class="grid grid-cols-4 gap-2 mb-3">
+        <div
+          v-for="s in statusList"
+          :key="s.key"
           class="rounded-2xl p-3 text-center shadow-sm cursor-pointer transition-all hover:scale-105"
           :class="s.bg"
           @click="filterStatus = filterStatus === s.key ? null : s.key"
@@ -32,6 +61,10 @@
           <div class="text-xs" :class="s.textColor">{{ s.label }}</div>
         </div>
       </div>
+
+      <p class="text-xs text-gray-400 mb-6 text-center">
+        当前范围：{{ selectedLevelMeta?.name || '全部关卡' }} · 共 {{ scopedCharacters.length }} 个汉字
+      </p>
 
       <!-- 筛选提示 -->
       <div v-if="filterStatus" class="mb-3 text-center">
@@ -44,7 +77,8 @@
       <!-- 字卡网格 -->
       <div class="grid grid-cols-5 gap-2">
         <div
-          v-for="c in filteredChars" :key="c.char"
+          v-for="c in filteredChars"
+          :key="c.char"
           class="rounded-2xl p-2 text-center cursor-pointer shadow-sm hover:scale-110 transition-all"
           :class="getStatusBg(getCharStatus(c.char))"
           @click="selectedChar = c"
@@ -52,6 +86,10 @@
           <div class="text-2xl font-black">{{ c.char }}</div>
           <div class="text-xs opacity-70">{{ c.pinyin }}</div>
         </div>
+      </div>
+
+      <div v-if="filteredChars.length === 0" class="mt-6 text-center text-gray-400 text-sm">
+        当前筛选下还没有匹配的汉字
       </div>
     </div>
 
@@ -93,11 +131,14 @@
           <div class="text-8xl font-black text-gray-800">{{ selectedChar.char }}</div>
           <div class="text-xl text-blue-400 font-bold">{{ selectedChar.pinyin }}</div>
           <div class="text-4xl mt-1">{{ selectedChar.emoji }}</div>
+          <div class="mt-2 text-sm text-gray-400">{{ levelName(selectedChar.level) }}</div>
         </div>
-        <div class="mb-4">
-          <span class="inline-block px-3 py-1 rounded-full font-bold text-sm"
-            :class="getStatusBg(getCharStatus(selectedChar.char))">
+        <div class="mb-4 flex items-center justify-between gap-2">
+          <span class="inline-block px-3 py-1 rounded-full font-bold text-sm" :class="getStatusBg(getCharStatus(selectedChar.char))">
             {{ statusLabel(getCharStatus(selectedChar.char)) }}
+          </span>
+          <span class="text-xs text-purple-500 bg-purple-50 px-3 py-1 rounded-full font-bold">
+            {{ levelName(selectedChar.level) }}
           </span>
         </div>
         <div class="text-sm text-gray-500">
@@ -118,11 +159,12 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { characters } from '../data/characters'
+import { characters, levels, getLevelMeta } from '../data/characters'
 import { getCharStatus, getProgress, resetProgress, getSettings, saveSettings } from '../utils/storage'
 
 const activeTab = ref('progress')
 const filterStatus = ref(null)
+const selectedLevel = ref('all')
 const selectedChar = ref(null)
 const confirmReset = ref(false)
 const settingMsg = ref('')
@@ -140,15 +182,28 @@ const statusList = [
   { key: 'unlearned', label: '未学过', bg: 'bg-gray-100', textColor: 'text-gray-500' },
 ]
 
+const selectedLevelMeta = computed(() => {
+  if (selectedLevel.value === 'all') return null
+  return getLevelMeta(selectedLevel.value)
+})
+
+const scopedCharacters = computed(() => {
+  if (selectedLevel.value === 'all') return characters
+  return characters.filter(item => item.level === selectedLevel.value)
+})
+
 const counts = computed(() => {
   const c = { mastered: 0, review: 0, strengthen: 0, unlearned: 0 }
-  characters.forEach(ch => { c[getCharStatus(ch.char)]++ })
+  scopedCharacters.value.forEach(ch => {
+    c[getCharStatus(ch.char)]++
+  })
   return c
 })
 
 const filteredChars = computed(() => {
-  if (!filterStatus.value) return characters
-  return characters.filter(c => getCharStatus(c.char) === filterStatus.value)
+  const base = scopedCharacters.value
+  if (!filterStatus.value) return base
+  return base.filter(c => getCharStatus(c.char) === filterStatus.value)
 })
 
 function getStatusBg(status) {
@@ -162,8 +217,17 @@ function getStatusBg(status) {
 }
 
 function statusLabel(status) {
-  const map = { mastered: '✅ 已掌握', review: '🟡 需复习', strengthen: '🔴 需强化', unlearned: '⬜ 未学过' }
+  const map = {
+    mastered: '✅ 已掌握',
+    review: '🟡 需复习',
+    strengthen: '🔴 需强化',
+    unlearned: '⬜ 未学过',
+  }
   return map[status] || '未学过'
+}
+
+function levelName(levelKey) {
+  return getLevelMeta(levelKey)?.name || '未分级'
 }
 
 function charProgress(char) {
@@ -181,13 +245,17 @@ function changePassword() {
   saveSettings(s)
   settingMsg.value = '密码已保存 ✅'
   newPassword.value = ''
-  setTimeout(() => { settingMsg.value = '' }, 2000)
+  setTimeout(() => {
+    settingMsg.value = ''
+  }, 2000)
 }
 
 function doReset() {
   resetProgress()
   confirmReset.value = false
   settingMsg.value = '进度已重置 ✅'
-  setTimeout(() => { settingMsg.value = '' }, 2000)
+  setTimeout(() => {
+    settingMsg.value = ''
+  }, 2000)
 }
 </script>
