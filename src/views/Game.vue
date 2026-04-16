@@ -1,5 +1,6 @@
 <template>
   <div class="min-h-screen flex flex-col items-center justify-center p-4">
+    <AchievementUnlock :achievement="recentAchievement" @close="recentAchievement = null" />
 
     <!-- 进度条 -->
     <div class="w-full max-w-md mb-6">
@@ -7,7 +8,8 @@
         <button @click="$router.push('/')" class="text-gray-400 hover:text-gray-600 text-2xl">←</button>
         <div class="flex gap-1">
           <span
-            v-for="i in questionCount" :key="i"
+            v-for="i in questionCount"
+            :key="i"
             class="w-6 h-6 rounded-full transition-all duration-300"
             :class="i <= currentIndex ? 'bg-orange-400' : 'bg-gray-200'"
           ></span>
@@ -21,11 +23,14 @@
       <div class="text-7xl mb-4">{{ resultEmoji }}</div>
       <h2 class="text-4xl font-black text-orange-500 mb-2">太棒了！</h2>
       <p class="text-xl text-gray-500 mb-4">{{ resultText }}</p>
-      <div class="flex justify-center gap-1 mb-8">
+      <div class="flex justify-center gap-1 mb-3">
         <span v-for="i in questionCount" :key="i" class="text-4xl">
           {{ i <= stars ? '⭐' : '☆' }}
         </span>
       </div>
+      <p v-if="checkin.streak > 0" class="text-sm text-orange-400 mb-6 font-bold">
+        🔥 已连续打卡 {{ checkin.streak }} 天
+      </p>
       <div class="flex flex-col gap-3 w-full">
         <button @click="restartGame" class="btn-primary bg-gradient-to-r from-orange-400 to-pink-500">
           🔄 再来一局
@@ -38,15 +43,17 @@
 
     <!-- 题目区域 -->
     <div v-else class="w-full max-w-md">
-
       <!-- 星星动画层 -->
       <div class="relative">
         <div
-          v-for="star in flyingStars" :key="star.id"
+          v-for="star in flyingStars"
+          :key="star.id"
           class="fixed text-3xl pointer-events-none z-50"
           :style="{
-            left: star.x + 'px', top: star.y + 'px',
-            '--tx': star.tx + 'px', '--ty': star.ty + 'px',
+            left: star.x + 'px',
+            top: star.y + 'px',
+            '--tx': star.tx + 'px',
+            '--ty': star.ty + 'px',
             animation: 'star-fly 0.8s ease-out forwards'
           }"
         >⭐</div>
@@ -54,7 +61,6 @@
 
       <!-- 题目卡 -->
       <div class="bg-white rounded-3xl shadow-xl p-6 mb-6">
-
         <!-- 看字选图：显示大汉字 -->
         <div v-if="currentQ.type === 'char-to-image'" class="text-center">
           <div class="text-2xl text-blue-400 font-bold mb-1">{{ currentQ.char.pinyin }}</div>
@@ -114,9 +120,11 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import AchievementUnlock from '../components/AchievementUnlock.vue'
 import { characters, getCharactersByLevel } from '../data/characters'
-import { getCharStatus, recordAnswer } from '../utils/storage'
+import { getCharStatus, recordAnswer, recordGamePlayed, getCounts } from '../utils/storage'
 import { speak, playCorrectSound, playWrongSound } from '../utils/speech'
+import { checkinToday, evaluateAchievements, getAchievements } from '../utils/progression'
 
 const TOTAL_QUESTIONS = 5
 const route = useRoute()
@@ -129,11 +137,14 @@ const feedback = ref(null)
 const selectedOpt = ref(null)
 const gameOver = ref(false)
 const flyingStars = ref([])
-const wrongCount = ref(0) // 当前题答错次数
+const wrongCount = ref(0)
+const finalized = ref(false)
+const recentAchievement = ref(null)
+const checkin = ref({ streak: 0 })
 
 const currentQ = computed(() => questions.value[currentIndex.value] || {})
 const currentLevel = computed(() => route.query.level || 'starter')
-const currentMode = computed(() => route.query.mode === 'review' ? 'review' : 'normal')
+const currentMode = computed(() => (route.query.mode === 'review' ? 'review' : 'normal'))
 const levelCharacters = computed(() => {
   const list = getCharactersByLevel(currentLevel.value)
   return list.length ? list : getCharactersByLevel('starter')
@@ -147,13 +158,14 @@ function shuffle(list) {
 function buildQuestion(char, pool) {
   const type = Math.random() > 0.5 ? 'char-to-image' : 'image-to-char'
   const sameLevelWrongPool = shuffle(pool.filter(c => c.char !== char.char))
-  const fallbackWrongPool = shuffle(characters.filter(c => c.char !== char.char && !sameLevelWrongPool.some(item => item.char === c.char)))
+  const fallbackWrongPool = shuffle(
+    characters.filter(c => c.char !== char.char && !sameLevelWrongPool.some(item => item.char === c.char))
+  )
   const wrongOptions = [...sameLevelWrongPool, ...fallbackWrongPool].slice(0, 2)
   const options = shuffle([char, ...wrongOptions])
   return { char, type, options }
 }
 
-// 生成题目：按 level/mode 过滤
 function generateQuestions() {
   const pool = levelCharacters.value
   const reviewChars = pool.filter(c => {
@@ -182,9 +194,10 @@ function restartGame() {
   selectedOpt.value = null
   gameOver.value = false
   wrongCount.value = 0
+  finalized.value = false
+  recentAchievement.value = null
 }
 
-// 初始化
 restartGame()
 
 function speakChar(char) {
@@ -216,7 +229,6 @@ function selectAnswer(opt) {
     playWrongSound()
     if (wrongCount.value < 2) {
       feedback.value = 'wrong1'
-      // 短暂抖动后清除选中状态
       setTimeout(() => {
         selectedOpt.value = null
         feedback.value = null
@@ -243,11 +255,37 @@ function spawnStars() {
       ty: Math.sin(angle) * dist,
     })
   }
-  setTimeout(() => { flyingStars.value = [] }, 900)
+  setTimeout(() => {
+    flyingStars.value = []
+  }, 900)
+}
+
+function finalizeGame() {
+  if (finalized.value) return
+  finalized.value = true
+
+  const gameStats = recordGamePlayed()
+  const checkinResult = checkinToday()
+  checkin.value = checkinResult.data
+
+  const counts = getCounts(characters)
+  const achievementState = evaluateAchievements({
+    stars: stars.value,
+    masteredCount: counts.mastered,
+    reviewCount: counts.review,
+    strengthenCount: counts.strengthen,
+    streak: checkin.value.streak,
+    playedGames: gameStats.playedGames || 0,
+  })
+
+  if (achievementState.recentUnlocked) {
+    recentAchievement.value = getAchievements().find(item => item.id === achievementState.recentUnlocked) || null
+  }
 }
 
 function nextQuestion() {
   if (currentIndex.value >= questions.value.length - 1) {
+    finalizeGame()
     gameOver.value = true
     return
   }
@@ -266,202 +304,7 @@ const resultEmoji = computed(() => {
 
 const resultText = computed(() => {
   if (stars.value === questions.value.length) return '满分！你真是小天才！'
-  if (stars.value >= Math.ceil(questions.value.length * 0.6)) return '答对了 ' + stars.value + ' 题，继续加油！'
+  if (stars.value >= Math.ceil(questions.value.length * 0.6)) return `答对了 ${stars.value} 题，继续加油！`
   return '没关系，多练习就会了！'
 })
 </script>
- 'char-to-image' ? '👇 选出正确的图片' : '👇 选出正确的汉字' }}
-      </p>
-
-      <!-- 选项区 -->
-      <div class="grid grid-cols-3 gap-3">
-        <button
-          v-for="opt in currentQ.options"
-          :key="opt.char"
-          @click="selectAnswer(opt)"
-          :disabled="answered"
-          class="option-card bg-white shadow-md"
-          :class="[
-            getOptionClass(opt),
-            currentQ.type === 'char-to-image' ? 'h-24 text-5xl' : 'h-24 text-4xl font-black text-gray-800'
-          ]"
-        >
-          {{ currentQ.type === 'char-to-image' ? opt.emoji : opt.char }}
-        </button>
-      </div>
-
-      <!-- 提示信息 -->
-      <div v-if="feedback" class="mt-4 text-center">
-        <p v-if="feedback === 'correct'" class="text-green-500 font-bold text-xl animate-bounce">✅ 真棒，答对了！</p>
-        <p v-else-if="feedback === 'wrong1'" class="text-orange-400 font-bold text-xl">🤔 再试试～</p>
-        <p v-else-if="feedback === 'wrong2'" class="text-red-400 font-bold text-xl">
-          没关系！正确答案是
-          <span class="text-red-600">{{ currentQ.type === 'char-to-image' ? currentQ.char.emoji : currentQ.char.char }}</span>
-        </p>
-        <button v-if="feedback !== 'wrong1'" @click="nextQuestion" class="mt-3 btn-secondary bg-orange-400 text-white">
-          {{ currentIndex < TOTAL_QUESTIONS ? '下一题 →' : '看结果 🎉' }}
-        </button>
-      </div>
-    </div>
-  </div>
-</template>
-
-<script setup>
-import { ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { characters, getCharactersByLevel } from '../data/characters'
-import { getCharStatus, recordAnswer } from '../utils/storage'
-import { speak, playCorrectSound, playWrongSound } from '../utils/speech'
-
-const TOTAL_QUESTIONS = 5
-const route = useRoute()
-
-const questions = ref([])
-const currentIndex = ref(0)
-const stars = ref(0)
-const answered = ref(false)
-const feedback = ref(null)
-const selectedOpt = ref(null)
-const gameOver = ref(false)
-const flyingStars = ref([])
-const wrongCount = ref(0) // 当前题答错次数
-
-const currentQ = computed(() => questions.value[currentIndex.value] || {})
-const currentLevel = computed(() => route.query.level || 'starter')
-const currentMode = computed(() => route.query.mode === 'review' ? 'review' : 'normal')
-const levelCharacters = computed(() => {
-  const list = getCharactersByLevel(currentLevel.value)
-  return list.length ? list : getCharactersByLevel('starter')
-})
-
-function shuffle(list) {
-  return [...list].sort(() => Math.random() - 0.5)
-}
-
-function buildQuestion(char, pool) {
-  const type = Math.random() > 0.5 ? 'char-to-image' : 'image-to-char'
-  const sameLevelWrongPool = shuffle(pool.filter(c => c.char !== char.char))
-  const fallbackWrongPool = shuffle(characters.filter(c => c.char !== char.char && !sameLevelWrongPool.some(item => item.char === c.char)))
-  const wrongOptions = [...sameLevelWrongPool, ...fallbackWrongPool].slice(0, 2)
-  const options = shuffle([char, ...wrongOptions])
-  return { char, type, options }
-}
-
-// 生成题目：按 level/mode 过滤
-function generateQuestions() {
-  const pool = levelCharacters.value
-  const reviewChars = pool.filter(c => {
-    const s = getCharStatus(c.char)
-    return s === 'strengthen' || s === 'review'
-  })
-  const otherChars = pool.filter(c => {
-    const s = getCharStatus(c.char)
-    return s !== 'strengthen' && s !== 'review'
-  })
-
-  const picked = currentMode.value === 'review'
-    ? (reviewChars.length ? shuffle(reviewChars) : shuffle(pool))
-    : [...shuffle(reviewChars), ...shuffle(otherChars)]
-
-  const finalPool = (picked.length ? picked : shuffle(pool)).slice(0, Math.min(TOTAL_QUESTIONS, pool.length))
-  return finalPool.map(char => buildQuestion(char, pool))
-}
-
-function restartGame() {
-  questions.value = generateQuestions()
-  currentIndex.value = 0
-  stars.value = 0
-  answered.value = false
-  feedback.value = null
-  selectedOpt.value = null
-  gameOver.value = false
-  wrongCount.value = 0
-}
-
-// 初始化
-restartGame()
-
-function speakChar(char) {
-  speak(char)
-}
-
-function getOptionClass(opt) {
-  if (!answered.value && selectedOpt.value?.char !== opt.char) return ''
-  if (opt.char === currentQ.value.char.char) return 'option-correct'
-  if (selectedOpt.value?.char === opt.char) return 'option-wrong'
-  return ''
-}
-
-function selectAnswer(opt) {
-  if (answered.value) return
-  selectedOpt.value = opt
-  const isCorrect = opt.char === currentQ.value.char.char
-
-  if (isCorrect) {
-    feedback.value = 'correct'
-    answered.value = true
-    stars.value++
-    playCorrectSound()
-    speak(currentQ.value.char.char)
-    spawnStars()
-    recordAnswer(currentQ.value.char.char, true)
-  } else {
-    wrongCount.value++
-    playWrongSound()
-    if (wrongCount.value < 2) {
-      feedback.value = 'wrong1'
-      // 短暂抖动后清除选中状态
-      setTimeout(() => {
-        selectedOpt.value = null
-        feedback.value = null
-      }, 800)
-    } else {
-      feedback.value = 'wrong2'
-      answered.value = true
-      recordAnswer(currentQ.value.char.char, false)
-    }
-  }
-}
-
-function spawnStars() {
-  const centerX = window.innerWidth / 2
-  const centerY = window.innerHeight / 2
-  for (let i = 0; i < 8; i++) {
-    const angle = (i / 8) * Math.PI * 2
-    const dist = 120 + Math.random() * 80
-    flyingStars.value.push({
-      id: Date.now() + i,
-      x: centerX,
-      y: centerY,
-      tx: Math.cos(angle) * dist,
-      ty: Math.sin(angle) * dist,
-    })
-  }
-  setTimeout(() => { flyingStars.value = [] }, 900)
-}
-
-function nextQuestion() {
-  if (currentIndex.value >= questions.value.length - 1) {
-    gameOver.value = true
-    return
-  }
-  currentIndex.value++
-  answered.value = false
-  feedback.value = null
-  selectedOpt.value = null
-  wrongCount.value = 0
-}
-
-const resultEmoji = computed(() => {
-  if (stars.value === questions.value.length) return '🏆'
-  if (stars.value >= Math.ceil(questions.value.length * 0.6)) return '🎉'
-  return '💪'
-})
-
-const resultText = computed(() => {
-  if (stars.value === questions.value.length) return '满分！你真是小天才！'
-  if (stars.value >= Math.ceil(questions.value.length * 0.6)) return '答对了 ' + stars.value + ' 题，继续加油！'
-  return '没关系，多练习就会了！'
-})
-</script>
-
