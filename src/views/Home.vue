@@ -71,6 +71,23 @@
       </div>
     </div>
 
+    <div v-if="nextLevelHint" class="w-full max-w-md mb-6 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-3xl shadow-lg p-5">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <div class="text-sm font-black opacity-90 mb-1">🚀 升级提示</div>
+          <div class="text-lg font-black">{{ nextLevelHint.title }}</div>
+        </div>
+        <div class="text-3xl">{{ nextLevelHint.emoji }}</div>
+      </div>
+      <p class="text-sm opacity-90 mb-4">{{ nextLevelHint.description }}</p>
+      <button
+        @click="goNextLevelFromHome"
+        class="w-full rounded-2xl bg-white text-purple-600 font-black py-3 hover:scale-[1.01] transition-all"
+      >
+        {{ nextLevelHint.buttonText }}
+      </button>
+    </div>
+
     <div class="w-full max-w-md mb-6 bg-white rounded-3xl shadow-lg p-5 border border-emerald-100">
       <div class="flex items-start justify-between gap-3 mb-3">
         <div>
@@ -240,6 +257,8 @@ const showOnboarding = ref(!appState.value.onboardingDone)
 const total = characters.length
 const selectedLevel = computed(() => appState.value.selectedLevel || 'starter')
 const selectedLevelMeta = computed(() => getLevelMeta(selectedLevel.value))
+const selectedLevelIndex = computed(() => levels.findIndex(level => level.key === selectedLevel.value))
+const nextLevel = computed(() => levels[selectedLevelIndex.value + 1] || null)
 const selectedLevelChars = computed(() => characters.filter(item => item.level === selectedLevel.value))
 const selectedLevelCount = computed(() => selectedLevelChars.value.length)
 const selectedLevelStats = computed(() => getCounts(selectedLevelChars.value))
@@ -248,6 +267,10 @@ const userEmail = computed(() => currentUser.value?.email?.split('@')[0] || '')
 const stats = computed(() => getCounts(characters))
 const userLevel = computed(() => getUserLevelTitle(stats.value.mastered))
 const levelProgress = computed(() => getLevelProgress(levels, characters, getCharStatus))
+const currentLevelProgress = computed(() => levelProgress.value.find(level => level.key === selectedLevel.value) || null)
+const nextLevelProgress = computed(() => nextLevel.value
+  ? levelProgress.value.find(level => level.key === nextLevel.value.key) || null
+  : null)
 const levelProgressWidth = computed(() => {
   if (!userLevel.value.next) return 100
   const prevThreshold = userLevel.value.next === 10 ? 0 : userLevel.value.next === 30 ? 10 : userLevel.value.next === 60 ? 30 : 60
@@ -302,6 +325,20 @@ const recommendedPlan = computed(() => {
 
 const recommendedQuestionCount = computed(() => Math.min(selectedLevelCount.value || 0, 5))
 
+const nextLevelHint = computed(() => {
+  if (!currentLevelProgress.value || !nextLevel.value || !nextLevelProgress.value) return null
+  if (!currentLevelProgress.value.unlocked) return null
+  if (currentLevelProgress.value.ratio < 0.8) return null
+  if (!nextLevelProgress.value.unlocked) return null
+
+  return {
+    emoji: nextLevel.value.emoji,
+    title: `${nextLevel.value.name} 已可挑战`,
+    description: `${selectedLevelMeta.value?.name || '当前关卡'} 已达到升级条件，可以开始挑战下一关了。`,
+    buttonText: `切换到${nextLevel.value.name}`,
+  }
+})
+
 const dailyTaskProgress = computed(() => {
   const today = getTodayString()
   const gameDone = checkin.value.lastCheckin === today
@@ -350,6 +387,11 @@ function selectLevel(level) {
     return
   }
   appState.value = saveAppState({ selectedLevel: level.key })
+}
+
+function goNextLevelFromHome() {
+  if (!nextLevel.value) return
+  appState.value = saveAppState({ selectedLevel: nextLevel.value.key })
 }
 
 function startGame(mode) {

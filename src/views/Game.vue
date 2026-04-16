@@ -28,10 +28,27 @@
           {{ i <= stars ? '⭐' : '☆' }}
         </span>
       </div>
-      <p v-if="checkin.streak > 0" class="text-sm text-orange-400 mb-6 font-bold">
+      <p v-if="checkin.streak > 0" class="text-sm text-orange-400 mb-4 font-bold">
         🔥 已连续打卡 {{ checkin.streak }} 天
       </p>
+      <div v-if="nextLevelHint" class="mb-4 rounded-3xl bg-purple-50 border border-purple-100 p-4 text-left">
+        <div class="flex items-start justify-between gap-3 mb-2">
+          <div>
+            <div class="text-sm text-purple-500 font-black mb-1">🚀 升级提示</div>
+            <div class="text-lg font-black text-purple-700">{{ nextLevelHint.title }}</div>
+          </div>
+          <div class="text-3xl">{{ nextLevelHint.emoji }}</div>
+        </div>
+        <p class="text-sm text-purple-600">{{ nextLevelHint.description }}</p>
+      </div>
       <div class="flex flex-col gap-3 w-full">
+        <button
+          v-if="nextLevelHint"
+          @click="goNextLevel"
+          class="btn-primary bg-gradient-to-r from-purple-500 to-indigo-500"
+        >
+          {{ nextLevelHint.buttonText }}
+        </button>
         <button @click="restartGame" class="btn-primary bg-gradient-to-r from-orange-400 to-pink-500">
           🔄 再来一局
         </button>
@@ -61,7 +78,6 @@
 
       <!-- 题目卡 -->
       <div class="bg-white rounded-3xl shadow-xl p-6 mb-6">
-        <!-- 看字选图：显示大汉字 -->
         <div v-if="currentQ.type === 'char-to-image'" class="text-center">
           <div class="text-2xl text-blue-400 font-bold mb-1">{{ currentQ.char.pinyin }}</div>
           <div class="text-9xl font-black text-gray-800 leading-none mb-2">{{ currentQ.char.char }}</div>
@@ -72,19 +88,16 @@
           >🔊</button>
         </div>
 
-        <!-- 看图选字：显示大号emoji -->
         <div v-else class="text-center">
           <div class="text-9xl mb-2">{{ currentQ.char.emoji }}</div>
           <div class="text-lg text-gray-400">{{ currentQ.char.description }}</div>
         </div>
       </div>
 
-      <!-- 提示文字 -->
       <p class="text-center text-gray-400 mb-4 text-lg">
         {{ currentQ.type === 'char-to-image' ? '👇 选出正确的图片' : '👇 选出正确的汉字' }}
       </p>
 
-      <!-- 选项区 -->
       <div class="grid grid-cols-3 gap-3">
         <button
           v-for="opt in currentQ.options"
@@ -101,7 +114,6 @@
         </button>
       </div>
 
-      <!-- 提示信息 -->
       <div v-if="feedback" class="mt-4 text-center">
         <p v-if="feedback === 'correct'" class="text-green-500 font-bold text-xl animate-bounce">✅ 真棒，答对了！</p>
         <p v-else-if="feedback === 'wrong1'" class="text-orange-400 font-bold text-xl">🤔 再试试～</p>
@@ -119,15 +131,16 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AchievementUnlock from '../components/AchievementUnlock.vue'
-import { characters, getCharactersByLevel } from '../data/characters'
+import { characters, levels, getCharactersByLevel, getLevelMeta } from '../data/characters'
 import { getCharStatus, recordAnswer, recordGamePlayed, getCounts } from '../utils/storage'
 import { speak, playCorrectSound, playWrongSound } from '../utils/speech'
-import { checkinToday, evaluateAchievements, getAchievements } from '../utils/progression'
+import { checkinToday, evaluateAchievements, getAchievements, getLevelProgress, saveAppState } from '../utils/progression'
 
 const TOTAL_QUESTIONS = 5
 const route = useRoute()
+const router = useRouter()
 
 const questions = ref([])
 const currentIndex = ref(0)
@@ -145,11 +158,32 @@ const checkin = ref({ streak: 0 })
 const currentQ = computed(() => questions.value[currentIndex.value] || {})
 const currentLevel = computed(() => route.query.level || 'starter')
 const currentMode = computed(() => (route.query.mode === 'review' ? 'review' : 'normal'))
+const currentLevelMeta = computed(() => getLevelMeta(currentLevel.value))
+const currentLevelIndex = computed(() => levels.findIndex(level => level.key === currentLevel.value))
+const nextLevel = computed(() => levels[currentLevelIndex.value + 1] || null)
 const levelCharacters = computed(() => {
   const list = getCharactersByLevel(currentLevel.value)
   return list.length ? list : getCharactersByLevel('starter')
 })
 const questionCount = computed(() => questions.value.length || TOTAL_QUESTIONS)
+const levelProgress = computed(() => getLevelProgress(levels, characters, getCharStatus))
+const currentLevelProgress = computed(() => levelProgress.value.find(level => level.key === currentLevel.value) || null)
+const nextLevelProgress = computed(() => nextLevel.value
+  ? levelProgress.value.find(level => level.key === nextLevel.value.key) || null
+  : null)
+const nextLevelHint = computed(() => {
+  if (!currentLevelProgress.value || !nextLevel.value || !nextLevelProgress.value) return null
+  if (!currentLevelProgress.value.unlocked) return null
+  if (currentLevelProgress.value.ratio < 0.8) return null
+  if (!nextLevelProgress.value.unlocked) return null
+
+  return {
+    emoji: nextLevel.value.emoji,
+    title: `${nextLevel.value.name} 已可挑战`,
+    description: `${currentLevelMeta.value?.name || '当前关卡'} 已达到升级条件，现在可以开始挑战下一关。`,
+    buttonText: `挑战${nextLevel.value.name}`,
+  }
+})
 
 function shuffle(list) {
   return [...list].sort(() => Math.random() - 0.5)
@@ -294,6 +328,12 @@ function nextQuestion() {
   feedback.value = null
   selectedOpt.value = null
   wrongCount.value = 0
+}
+
+function goNextLevel() {
+  if (!nextLevel.value) return
+  saveAppState({ selectedLevel: nextLevel.value.key })
+  router.push({ path: '/game', query: { level: nextLevel.value.key, mode: 'normal' } })
 }
 
 const resultEmoji = computed(() => {
