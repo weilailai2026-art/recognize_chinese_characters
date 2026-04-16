@@ -71,6 +71,37 @@
       </div>
     </div>
 
+    <div class="w-full max-w-md mb-6 bg-white rounded-3xl shadow-lg p-5 border border-emerald-100">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <div class="text-sm text-emerald-500 font-black mb-1">✅ 今日任务完成度</div>
+          <div class="text-lg font-black text-gray-800">{{ dailyTaskStatus.title }}</div>
+        </div>
+        <div class="text-3xl">{{ dailyTaskStatus.emoji }}</div>
+      </div>
+      <p class="text-sm text-gray-500 mb-4">{{ dailyTaskStatus.description }}</p>
+      <div class="mb-3 flex items-center justify-between text-xs text-gray-400">
+        <span>今日进度</span>
+        <span>{{ dailyTaskProgress.done }}/{{ dailyTaskProgress.total }}</span>
+      </div>
+      <div class="h-3 rounded-full bg-gray-100 overflow-hidden mb-4">
+        <div
+          class="h-full bg-gradient-to-r from-emerald-400 to-green-500 transition-all"
+          :style="{ width: dailyTaskProgress.percent + '%' }"
+        ></div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <div class="rounded-2xl px-3 py-2 font-bold"
+             :class="dailyTaskProgress.gameDone ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'">
+          {{ dailyTaskProgress.gameDone ? '✅ 今天已练过' : '🎮 今天先完成 1 局' }}
+        </div>
+        <div class="rounded-2xl px-3 py-2 font-bold"
+             :class="dailyTaskProgress.reviewDone ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'">
+          {{ dailyTaskProgress.reviewDone ? '✅ 当前关卡较稳' : '📘 还可继续处理推荐任务' }}
+        </div>
+      </div>
+    </div>
+
     <div class="w-full max-w-md mb-6 bg-white rounded-3xl shadow-lg p-5 border border-orange-100">
       <div class="flex items-start justify-between gap-3 mb-3">
         <div>
@@ -186,6 +217,7 @@ import {
   getAppState,
   getCheckinData,
   getLevelProgress,
+  getTodayString,
   getUserLevelTitle,
   saveAppState,
 } from '../utils/progression'
@@ -269,6 +301,47 @@ const recommendedPlan = computed(() => {
 })
 
 const recommendedQuestionCount = computed(() => Math.min(selectedLevelCount.value || 0, 5))
+
+const dailyTaskProgress = computed(() => {
+  const today = getTodayString()
+  const gameDone = checkin.value.lastCheckin === today
+  const reviewDone = (selectedLevelStats.value.review + selectedLevelStats.value.strengthen) === 0
+  const done = Number(gameDone) + Number(reviewDone)
+  const total = 2
+  return {
+    gameDone,
+    reviewDone,
+    done,
+    total,
+    percent: (done / total) * 100,
+  }
+})
+
+const dailyTaskStatus = computed(() => {
+  const progress = dailyTaskProgress.value
+
+  if (progress.done === progress.total) {
+    return {
+      emoji: '🎉',
+      title: '今天的任务完成了',
+      description: '今天已经练过，而且当前关卡该复习的内容也处理得不错，可以轻松收工。',
+    }
+  }
+
+  if (progress.gameDone) {
+    return {
+      emoji: '💪',
+      title: '再冲一下推荐练习',
+      description: '今天已经完成打卡了，再把当前关卡的推荐内容处理掉，今天就很完整。',
+    }
+  }
+
+  return {
+    emoji: '🚀',
+    title: '今天先完成 1 局',
+    description: `先开始一局 ${selectedLevelMeta.value?.name || '当前关卡'} 练习，打卡和今日任务都会一起推进。`,
+  }
+})
 
 function selectLevel(level) {
   if (!level.unlocked) {
