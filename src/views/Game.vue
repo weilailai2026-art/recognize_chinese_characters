@@ -1,6 +1,5 @@
 <template>
   <div class="min-h-screen flex flex-col items-center justify-center p-4">
-
     <!-- 进度条 -->
     <div class="w-full max-w-md mb-6">
       <div class="flex justify-between items-center mb-2">
@@ -21,6 +20,74 @@
       <div class="text-7xl mb-4">{{ resultEmoji }}</div>
       <h2 class="text-4xl font-black text-orange-500 mb-2">太棒了！</h2>
       <p class="text-xl text-gray-500 mb-4">{{ resultText }}</p>
+
+      <div class="mb-6 rounded-3xl bg-white p-5 shadow-lg text-left">
+        <div class="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <p class="text-sm font-bold text-orange-400">本轮学习报告</p>
+            <h3 class="text-2xl font-black text-gray-800">这次学会了什么？</h3>
+          </div>
+          <div class="rounded-2xl bg-orange-50 px-3 py-2 text-right">
+            <div class="text-2xl font-black text-orange-500">{{ sessionSummary.correctCount }}</div>
+            <div class="text-xs text-orange-400">答对题数</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 mb-4 text-center">
+          <div class="rounded-2xl bg-green-50 p-3">
+            <div class="text-2xl font-black text-green-500">{{ sessionSummary.newlyMastered.length }}</div>
+            <div class="text-xs text-green-600">新掌握</div>
+          </div>
+          <div class="rounded-2xl bg-yellow-50 p-3">
+            <div class="text-2xl font-black text-yellow-500">{{ sessionSummary.needReview.length }}</div>
+            <div class="text-xs text-yellow-600">待复习</div>
+          </div>
+          <div class="rounded-2xl bg-red-50 p-3">
+            <div class="text-2xl font-black text-red-500">{{ sessionSummary.needStrengthen.length }}</div>
+            <div class="text-xs text-red-600">待强化</div>
+          </div>
+        </div>
+
+        <div class="space-y-3 text-sm">
+          <div v-if="sessionSummary.newlyMastered.length">
+            <div class="mb-1 font-bold text-green-600">✅ 这轮表现很棒</div>
+            <div class="flex flex-wrap gap-2">
+              <span
+                v-for="item in sessionSummary.newlyMastered"
+                :key="item.char"
+                class="rounded-full bg-green-100 px-3 py-1 font-bold text-green-700"
+              >{{ item.char }} · {{ item.pinyin }}</span>
+            </div>
+          </div>
+
+          <div v-if="sessionSummary.needReview.length">
+            <div class="mb-1 font-bold text-yellow-600">🟡 下一轮建议复习</div>
+            <div class="flex flex-wrap gap-2">
+              <span
+                v-for="item in sessionSummary.needReview"
+                :key="item.char"
+                class="rounded-full bg-yellow-100 px-3 py-1 font-bold text-yellow-700"
+              >{{ item.char }} · {{ item.pinyin }}</span>
+            </div>
+          </div>
+
+          <div v-if="sessionSummary.needStrengthen.length">
+            <div class="mb-1 font-bold text-red-500">🔴 这几个字建议重点强化</div>
+            <div class="flex flex-wrap gap-2">
+              <span
+                v-for="item in sessionSummary.needStrengthen"
+                :key="item.char"
+                class="rounded-full bg-red-100 px-3 py-1 font-bold text-red-600"
+              >{{ item.char }} · {{ item.pinyin }}</span>
+            </div>
+          </div>
+
+          <p class="rounded-2xl bg-blue-50 px-4 py-3 leading-6 text-blue-600 font-bold">
+            {{ sessionAdvice }}
+          </p>
+        </div>
+      </div>
+
       <div class="flex justify-center gap-1 mb-8">
         <span v-for="i in TOTAL_QUESTIONS" :key="i" class="text-4xl">
           {{ i <= stars ? '⭐' : '☆' }}
@@ -30,6 +97,9 @@
         <button @click="restartGame" class="btn-primary bg-gradient-to-r from-orange-400 to-pink-500">
           🔄 再来一局
         </button>
+        <button @click="$router.push('/parent')" class="btn-secondary bg-blue-100 text-blue-600 border-2 border-blue-200">
+          👨👩👧 看家长中心
+        </button>
         <button @click="$router.push('/')" class="btn-secondary bg-white text-gray-500 border-2 border-gray-200">
           🏠 回首页
         </button>
@@ -38,7 +108,6 @@
 
     <!-- 题目区域 -->
     <div v-else class="w-full max-w-md">
-
       <!-- 星星动画层 -->
       <div class="relative">
         <div
@@ -54,8 +123,6 @@
 
       <!-- 题目卡 -->
       <div class="bg-white rounded-3xl shadow-xl p-6 mb-6">
-
-        <!-- 看字选图：显示大汉字 -->
         <div v-if="currentQ.type === 'char-to-image'" class="text-center">
           <div class="text-2xl text-blue-400 font-bold mb-1">{{ currentQ.char.pinyin }}</div>
           <div class="text-9xl font-black text-gray-800 leading-none mb-2">{{ currentQ.char.char }}</div>
@@ -66,19 +133,16 @@
           >🔊</button>
         </div>
 
-        <!-- 看图选字：显示大号emoji -->
         <div v-else class="text-center">
           <div class="text-9xl mb-2">{{ currentQ.char.emoji }}</div>
           <div class="text-lg text-gray-400">{{ currentQ.char.description }}</div>
         </div>
       </div>
 
-      <!-- 提示文字 -->
       <p class="text-center text-gray-400 mb-4 text-lg">
         {{ currentQ.type === 'char-to-image' ? '👇 选出正确的图片' : '👇 选出正确的汉字' }}
       </p>
 
-      <!-- 选项区 -->
       <div class="grid grid-cols-3 gap-3">
         <button
           v-for="opt in currentQ.options"
@@ -95,7 +159,6 @@
         </button>
       </div>
 
-      <!-- 提示信息 -->
       <div v-if="feedback" class="mt-4 text-center">
         <p v-if="feedback === 'correct'" class="text-green-500 font-bold text-xl animate-bounce">✅ 真棒，答对了！</p>
         <p v-else-if="feedback === 'wrong1'" class="text-orange-400 font-bold text-xl">🤔 再试试～</p>
@@ -114,7 +177,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { characters } from '../data/characters'
-import { getCharStatus, recordAnswer } from '../utils/storage'
+import { getCharStatus, recordAnswer, saveLearningSession } from '../utils/storage'
 import { speak, playCorrectSound, playWrongSound } from '../utils/speech'
 
 const TOTAL_QUESTIONS = 5
@@ -127,11 +190,12 @@ const feedback = ref(null)
 const selectedOpt = ref(null)
 const gameOver = ref(false)
 const flyingStars = ref([])
-const wrongCount = ref(0) // 当前题答错次数
+const wrongCount = ref(0)
+const questionResults = ref([])
+const sessionSummary = ref({ newlyMastered: [], needReview: [], needStrengthen: [], correctCount: 0 })
 
 const currentQ = computed(() => questions.value[currentIndex.value] || {})
 
-// 生成题目：优先抽需强化/复习的字
 function generateQuestions() {
   const prioritized = characters.filter(c => {
     const s = getCharStatus(c.char)
@@ -142,14 +206,12 @@ function generateQuestions() {
     return s !== 'strengthen' && s !== 'review'
   })
 
-  // 打乱优先词
   const shufflePri = [...prioritized].sort(() => Math.random() - 0.5)
   const shuffleOth = [...others].sort(() => Math.random() - 0.5)
   const pool = [...shufflePri, ...shuffleOth].slice(0, TOTAL_QUESTIONS)
 
   return pool.map(char => {
     const type = Math.random() > 0.5 ? 'char-to-image' : 'image-to-char'
-    // 生成3个错误选项
     const wrongPool = characters.filter(c => c.char !== char.char).sort(() => Math.random() - 0.5)
     const options = [char, ...wrongPool.slice(0, 2)].sort(() => Math.random() - 0.5)
     return { char, type, options }
@@ -165,9 +227,10 @@ function restartGame() {
   selectedOpt.value = null
   gameOver.value = false
   wrongCount.value = 0
+  questionResults.value = []
+  sessionSummary.value = { newlyMastered: [], needReview: [], needStrengthen: [], correctCount: 0 }
 }
 
-// 初始化
 restartGame()
 
 function speakChar(char) {
@@ -194,12 +257,19 @@ function selectAnswer(opt) {
     speak(currentQ.value.char.char)
     spawnStars()
     recordAnswer(currentQ.value.char.char, true)
+    questionResults.value.push({
+      char: currentQ.value.char.char,
+      pinyin: currentQ.value.char.pinyin,
+      category: currentQ.value.char.category,
+      correct: true,
+      wrongAttempts: wrongCount.value,
+      finalStatus: getCharStatus(currentQ.value.char.char),
+    })
   } else {
     wrongCount.value++
     playWrongSound()
     if (wrongCount.value < 2) {
       feedback.value = 'wrong1'
-      // 短暂抖动后清除选中状态
       setTimeout(() => {
         selectedOpt.value = null
         feedback.value = null
@@ -208,6 +278,14 @@ function selectAnswer(opt) {
       feedback.value = 'wrong2'
       answered.value = true
       recordAnswer(currentQ.value.char.char, false)
+      questionResults.value.push({
+        char: currentQ.value.char.char,
+        pinyin: currentQ.value.char.pinyin,
+        category: currentQ.value.char.category,
+        correct: false,
+        wrongAttempts: wrongCount.value,
+        finalStatus: getCharStatus(currentQ.value.char.char),
+      })
     }
   }
 }
@@ -229,8 +307,31 @@ function spawnStars() {
   setTimeout(() => { flyingStars.value = [] }, 900)
 }
 
+function buildSessionSummary() {
+  const newlyMastered = questionResults.value.filter(item => item.correct && item.finalStatus === 'mastered')
+  const needReview = questionResults.value.filter(item => item.finalStatus === 'review')
+  const needStrengthen = questionResults.value.filter(item => item.finalStatus === 'strengthen' || !item.correct)
+
+  sessionSummary.value = {
+    newlyMastered,
+    needReview,
+    needStrengthen,
+    correctCount: questionResults.value.filter(item => item.correct).length,
+  }
+
+  saveLearningSession({
+    totalQuestions: TOTAL_QUESTIONS,
+    stars: stars.value,
+    correctCount: sessionSummary.value.correctCount,
+    newlyMastered,
+    needReview,
+    needStrengthen,
+  })
+}
+
 function nextQuestion() {
   if (currentIndex.value >= TOTAL_QUESTIONS - 1) {
+    buildSessionSummary()
     gameOver.value = true
     return
   }
@@ -251,5 +352,18 @@ const resultText = computed(() => {
   if (stars.value === 5) return '满分！你真是小天才！'
   if (stars.value >= 3) return '答对了 ' + stars.value + ' 题，继续加油！'
   return '没关系，多练习就会了！'
+})
+
+const sessionAdvice = computed(() => {
+  if (sessionSummary.value.needStrengthen.length) {
+    return '建议下一轮优先复习红色强化字，连续多玩 1～2 轮，记忆会更稳。'
+  }
+  if (sessionSummary.value.needReview.length) {
+    return '这一轮整体不错，下一轮把待复习的字再过一遍，容易变成“已掌握”。'
+  }
+  if (sessionSummary.value.newlyMastered.length) {
+    return '这一轮表现很棒，已经有新掌握的字了，可以继续挑战下一轮。'
+  }
+  return '继续保持每天 5 分钟的节奏，慢慢积累就会看到明显进步。'
 })
 </script>

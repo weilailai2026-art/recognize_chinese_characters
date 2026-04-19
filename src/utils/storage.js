@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'hanzi_progress'
 const SETTINGS_KEY = 'hanzi_settings'
+const SESSION_KEY = 'hanzi_sessions'
 
 // 获取所有进度
 export function getProgress() {
@@ -37,9 +38,9 @@ export function getCharStatus(char) {
   const progress = getProgress()
   const data = progress[char]
   if (!data) return 'unlearned' // 灰：未学
-  if (data.correct >= 2) return 'mastered'  // 绿：已掌握
-  if (data.correct === 1) return 'review'   // 黄：需复习
-  if (data.wrong >= 2) return 'strengthen'  // 红：需强化
+  if (data.correct >= 2) return 'mastered' // 绿：已掌握
+  if (data.correct === 1) return 'review' // 黄：需复习
+  if (data.wrong >= 2) return 'strengthen' // 红：需强化
   return 'review'
 }
 
@@ -54,9 +55,31 @@ export function getStatusColor(status) {
   return map[status] || map.unlearned
 }
 
+export function saveLearningSession(session) {
+  try {
+    const sessions = JSON.parse(localStorage.getItem(SESSION_KEY) || '[]')
+    sessions.unshift({
+      ...session,
+      time: session.time || Date.now(),
+    })
+    localStorage.setItem(SESSION_KEY, JSON.stringify(sessions.slice(0, 30)))
+  } catch {
+    localStorage.setItem(SESSION_KEY, JSON.stringify([{ ...session, time: Date.now() }]))
+  }
+}
+
+export function getLearningSessions() {
+  try {
+    return JSON.parse(localStorage.getItem(SESSION_KEY) || '[]')
+  } catch {
+    return []
+  }
+}
+
 // 重置所有进度
 export function resetProgress() {
   localStorage.removeItem(STORAGE_KEY)
+  localStorage.removeItem(SESSION_KEY)
 }
 
 // 设置管理
