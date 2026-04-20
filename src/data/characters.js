@@ -1,3 +1,5 @@
+import { pinyin } from 'pinyin-pro'
+
 export const levels = [
   {
     key: 'starter',
@@ -293,6 +295,66 @@ const rawCharacters = [
   { char: '每', pinyin: 'měi', category: '逻辑', level: 'advanced', emoji: '🗓️', description: '每天' },
   { char: '次', pinyin: 'cì', category: '逻辑', level: 'advanced', emoji: '🔢', description: '一次' },
 ]
+
+const expansionCharacters = [
+  // 字库扩充：面向幼小衔接和低年级识字，按生活场景、常用词、抽象概念分级补足到 500+ 字。
+  ...makeCharacters('两百千万个只条块片张双', '数字量词', 'beginner', '🔢'),
+  ...makeCharacters('这那哪谁什么几自己它边旁东南西北内间远近旁', '方位代词', 'beginner', '🧭'),
+  ...makeCharacters('见找叫抱拍踢爬躲追停等起落回进出过转唱', '动作', 'beginner', '🏃'),
+  ...makeCharacters('米菜肉蛋瓜豆茶汤饼苹香蕉梨桃', '食物', 'beginner', '🍎'),
+  ...makeCharacters('牙脸腿肚背发嘴舌身', '身体', 'beginner', '🧒'),
+  ...makeCharacters('杯碗勺筷盘盆桶伞钟镜箱袋', '生活物品', 'beginner', '🏠'),
+  ...makeCharacters('公交行电机桥', '交通', 'beginner', '🚗'),
+  ...makeCharacters('虫鸭鹅猪虎狼猴熊象蛇', '动物', 'beginner', '🐾'),
+  ...makeCharacters('亮暗甜苦酸辣软硬轻重圆方直弯干湿胖瘦', '形容', 'beginner', '✨'),
+  ...makeCharacters('晴阴雷雾冰暖凉', '天气', 'beginner', '🌦️'),
+  ...makeCharacters('叔姨伯姑舅婆亲友客', '家庭人物', 'intermediate', '👨‍👩‍👧‍👦'),
+  ...makeCharacters('老幼师生同伙伴朋名姓', '人物关系', 'intermediate', '🧑‍🏫'),
+  ...makeCharacters('柜架盒瓶裙袜', '生活物品', 'intermediate', '🎒'),
+  ...makeCharacters('铅尺刀胶剪册页题号', '学习用品', 'intermediate', '✏️'),
+  ...makeCharacters('语文数音体育科术故事游戏', '学习课程', 'intermediate', '📚'),
+  ...makeCharacters('厨卧厅厕院楼梯墙屋顶', '居家场景', 'intermediate', '🏡'),
+  ...makeCharacters('商超图馆操室', '公共场景', 'intermediate', '🏫'),
+  ...makeCharacters('孙邻居护士警察司农民工', '职业人物', 'intermediate', '👷'),
+  ...makeCharacters('午夜晨周期秒半刻', '时间', 'intermediate', '⏰'),
+  ...makeCharacters('李杏橙葡萄莓菠萝', '水果', 'intermediate', '🍓'),
+  ...makeCharacters('卜番茄青', '蔬菜', 'intermediate', '🥬'),
+  ...makeCharacters('刷扫擦切煮炒烤搬抬挂贴收拾整', '生活动作', 'intermediate', '🧹'),
+  ...makeCharacters('始终先', '顺序方位', 'intermediate', '🧭'),
+  ...makeCharacters('安全危险健康病疼痛舒服', '健康安全', 'intermediate', '🛡️'),
+  ...makeCharacters('认勇敢礼貌静齐聪', '品质', 'intermediate', '🌟'),
+  ...makeCharacters('如然已经正突然', '常用连接', 'advanced', '🔗'),
+  ...makeCharacters('庭世界', '社会', 'advanced', '🌏'),
+  ...makeCharacters('原结案办法主会希', '抽象', 'advanced', '💡'),
+  ...makeCharacters('现决定准备完成继续束', '动作抽象', 'advanced', '🎯'),
+  ...makeCharacters('仔细诚善良优秀特别', '品质评价', 'advanced', '🏅'),
+  ...makeCharacters('比赛运动闻节目', '活动娱乐', 'advanced', '🎭'),
+  ...makeCharacters('颜色声味道温度速度向距离', '感知概念', 'advanced', '👀'),
+  ...makeCharacters('加减乘除于较', '数学概念', 'advanced', '➗'),
+  ...makeCharacters('季气阳', '自然概念', 'advanced', '🌿'),
+  ...makeCharacters('太洋森林', '自然世界', 'advanced', '🌌'),
+]
+
+for (const item of expansionCharacters) {
+  if (!rawCharacters.some(existing => existing.char === item.char)) {
+    rawCharacters.push(item)
+  }
+}
+
+function makeCharacters(chars, category, level, emoji) {
+  return [...chars].map(char => ({
+    char,
+    pinyin: pinyin(char, { toneType: 'symbol' }),
+    category,
+    level,
+    emoji,
+    description: makeDescription(char, category),
+  }))
+}
+
+function makeDescription(char, category) {
+  return `认识“${char}”字（${category}）`
+}
 
 const seen = new Set()
 export const characters = rawCharacters.filter(item => {
