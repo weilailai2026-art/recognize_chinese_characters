@@ -10,7 +10,8 @@
     <!-- Tab -->
     <div class="flex gap-2 mb-6 max-w-5xl mx-auto">
       <button
-        v-for="tab in tabs" :key="tab.key"
+        v-for="tab in tabs"
+        :key="tab.key"
         @click="activeTab = tab.key"
         class="flex-1 py-2 rounded-2xl font-bold transition-all"
         :class="activeTab === tab.key
@@ -166,10 +167,29 @@
           </div>
         </div>
       </div>
+
+      <div v-if="filteredChars.length === 0" class="mt-6 text-center text-gray-400 text-sm">
+        当前筛选下还没有匹配的汉字
+      </div>
     </div>
 
     <!-- 设置 -->
     <div v-if="activeTab === 'settings'" class="max-w-md mx-auto bg-white rounded-3xl shadow-lg p-6">
+      <h3 class="text-xl font-black text-gray-700 mb-4">🔊 学习声音</h3>
+      <div class="flex items-center justify-between rounded-2xl border border-gray-200 px-4 py-3 mb-6">
+        <div>
+          <div class="font-bold text-gray-700">发音与答题音效</div>
+          <div class="text-sm text-gray-400">关闭后将不再播放读音和对错提示音</div>
+        </div>
+        <button
+          @click="toggleSound"
+          class="px-4 py-2 rounded-2xl font-bold transition-all"
+          :class="settings.sound ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'"
+        >
+          {{ settings.sound ? '已开启' : '已关闭' }}
+        </button>
+      </div>
+
       <h3 class="text-xl font-black text-gray-700 mb-4">🔑 修改密码</h3>
       <input
         v-model="newPassword"
@@ -198,18 +218,20 @@
       <div v-if="settingMsg" class="mt-3 text-center text-green-500 font-bold">{{ settingMsg }}</div>
     </div>
 
-    <!-- 字详情弹窗 -->
     <div v-if="selectedChar" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="selectedChar = null">
       <div class="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
         <div class="text-center mb-4">
           <div class="text-8xl font-black text-gray-800">{{ selectedChar.char }}</div>
           <div class="text-xl text-blue-400 font-bold">{{ selectedChar.pinyin }}</div>
           <div class="text-4xl mt-1">{{ selectedChar.emoji }}</div>
+          <div class="mt-2 text-sm text-gray-400">{{ levelName(selectedChar.level) }}</div>
         </div>
-        <div class="mb-4">
-          <span class="inline-block px-3 py-1 rounded-full font-bold text-sm"
-            :class="getStatusBg(getCharStatus(selectedChar.char))">
+        <div class="mb-4 flex items-center justify-between gap-2">
+          <span class="inline-block px-3 py-1 rounded-full font-bold text-sm" :class="getStatusBg(getCharStatus(selectedChar.char))">
             {{ statusLabel(getCharStatus(selectedChar.char)) }}
+          </span>
+          <span class="text-xs text-purple-500 bg-purple-50 px-3 py-1 rounded-full font-bold">
+            {{ levelName(selectedChar.level) }}
           </span>
         </div>
         <div class="text-sm text-gray-500 space-y-2">
@@ -246,10 +268,12 @@ import {
 
 const activeTab = ref('progress')
 const filterStatus = ref(null)
+const selectedLevel = ref('all')
 const selectedChar = ref(null)
 const confirmReset = ref(false)
 const settingMsg = ref('')
 const newPassword = ref('')
+const settings = ref(getSettings())
 
 const tabs = [
   { key: 'progress', label: '📊 学习进度' },
@@ -268,13 +292,39 @@ const recentSessions = computed(() => sessions.value.slice(0, 5))
 
 const counts = computed(() => {
   const c = { mastered: 0, review: 0, strengthen: 0, unlearned: 0 }
-  characters.forEach(ch => { c[getCharStatus(ch.char)]++ })
+  scopedCharacters.value.forEach(ch => {
+    c[getCharStatus(ch.char)]++
+  })
   return c
 })
 
+const levelSummaries = computed(() => {
+  return levels.map(level => {
+    const chars = characters.filter(item => item.level === level.key)
+    const levelCounts = { mastered: 0, review: 0, strengthen: 0, unlearned: 0 }
+
+    chars.forEach(ch => {
+      levelCounts[getCharStatus(ch.char)]++
+    })
+
+    const total = chars.length || 1
+    const mastered = levelCounts.mastered
+    const ratio = mastered / total
+
+    return {
+      ...level,
+      total: chars.length,
+      mastered,
+      ratio,
+      counts: levelCounts,
+    }
+  })
+})
+
 const filteredChars = computed(() => {
-  if (!filterStatus.value) return characters
-  return characters.filter(c => getCharStatus(c.char) === filterStatus.value)
+  const base = scopedCharacters.value
+  if (!filterStatus.value) return base
+  return base.filter(c => getCharStatus(c.char) === filterStatus.value)
 })
 
 const latestStudyText = computed(() => {
@@ -376,8 +426,17 @@ function getStatusBg(status) {
 }
 
 function statusLabel(status) {
-  const map = { mastered: '✅ 已掌握', review: '🟡 需复习', strengthen: '🔴 需强化', unlearned: '⬜ 未学过' }
+  const map = {
+    mastered: '✅ 已掌握',
+    review: '🟡 需复习',
+    strengthen: '🔴 需强化',
+    unlearned: '⬜ 未学过',
+  }
   return map[status] || '未学过'
+}
+
+function levelName(levelKey) {
+  return getLevelMeta(levelKey)?.name || '未分级'
 }
 
 function charProgress(char) {
@@ -397,18 +456,22 @@ function changePassword() {
     settingMsg.value = '请输入4位数字密码'
     return
   }
-  const s = getSettings()
-  s.password = newPassword.value
-  saveSettings(s)
+  const next = { ...settings.value, password: newPassword.value }
+  settings.value = next
+  saveSettings(next)
   settingMsg.value = '密码已保存 ✅'
   newPassword.value = ''
-  setTimeout(() => { settingMsg.value = '' }, 2000)
+  setTimeout(() => {
+    settingMsg.value = ''
+  }, 2000)
 }
 
 function doReset() {
   resetProgress()
   confirmReset.value = false
   settingMsg.value = '进度已重置 ✅'
-  setTimeout(() => { settingMsg.value = '' }, 2000)
+  setTimeout(() => {
+    settingMsg.value = ''
+  }, 2000)
 }
 </script>

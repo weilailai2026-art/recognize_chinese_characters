@@ -145,28 +145,220 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { characters } from '../data/characters'
-import { getCharStatus } from '../utils/storage'
+import { characters, levels, getLevelMeta } from '../data/characters'
+import { getCharStatus, getCounts, getSettings, syncProgressFromCloud } from '../utils/storage'
+import { currentUser, isLoggedIn, signOut } from '../utils/auth'
+import {
+  consumeRecentAchievement,
+  getAchievements,
+  getAppState,
+  getCheckinData,
+  getLevelProgress,
+  getTodayString,
+  getUserLevelTitle,
+  saveAppState,
+} from '../utils/progression'
 import PasswordModal from '../components/PasswordModal.vue'
+import AuthModal from '../components/AuthModal.vue'
+import OnboardingModal from '../components/OnboardingModal.vue'
+import AchievementUnlock from '../components/AchievementUnlock.vue'
 
 const router = useRouter()
 const showPasswordModal = ref(false)
+const showAuth = ref(false)
+const loading = ref(false)
+const errorMsg = ref('')
+const recentAchievement = ref(null)
+const appState = ref(getAppState())
+const checkin = ref(getCheckinData())
+const achievements = ref(getAchievements())
+const showOnboarding = ref(!appState.value.onboardingDone)
+const soundEnabled = computed(() => getSettings().sound !== false)
 
 const total = characters.length
+const selectedLevel = computed(() => appState.value.selectedLevel || 'starter')
+const selectedLevelMeta = computed(() => getLevelMeta(selectedLevel.value))
+const selectedLevelIndex = computed(() => levels.findIndex(level => level.key === selectedLevel.value))
+const nextLevel = computed(() => levels[selectedLevelIndex.value + 1] || null)
+const selectedLevelChars = computed(() => characters.filter(item => item.level === selectedLevel.value))
+const selectedLevelCount = computed(() => selectedLevelChars.value.length)
+const selectedLevelStats = computed(() => getCounts(selectedLevelChars.value))
 
-const stats = computed(() => {
-  const counts = { mastered: 0, review: 0, strengthen: 0, unlearned: 0 }
-  characters.forEach(c => {
-    const s = getCharStatus(c.char)
-    counts[s]++
-  })
-  return counts
+const userEmail = computed(() => currentUser.value?.email?.split('@')[0] || '')
+const stats = computed(() => getCounts(characters))
+const userLevel = computed(() => getUserLevelTitle(stats.value.mastered))
+const levelProgress = computed(() => getLevelProgress(levels, characters, getCharStatus))
+const currentLevelProgress = computed(() => levelProgress.value.find(level => level.key === selectedLevel.value) || null)
+const nextLevelProgress = computed(() => nextLevel.value
+  ? levelProgress.value.find(level => level.key === nextLevel.value.key) || null
+  : null)
+const levelProgressWidth = computed(() => {
+  if (!userLevel.value.next) return 100
+  const prevThreshold = userLevel.value.next === 10 ? 0 : userLevel.value.next === 30 ? 10 : userLevel.value.next === 60 ? 30 : 60
+  const span = userLevel.value.next - prevThreshold
+  const current = Math.max(stats.value.mastered - prevThreshold, 0)
+  return Math.min((current / span) * 100, 100)
 })
+
+const recommendedPlan = computed(() => {
+  const levelName = selectedLevelMeta.value?.name || '当前关卡'
+  const levelStats = selectedLevelStats.value
+  const reviewTotal = levelStats.review + levelStats.strengthen
+
+  if (levelStats.strengthen > 0) {
+    return {
+      mode: 'review',
+      emoji: '🚑',
+      title: `先补强 ${levelName}`,
+      description: `这个关卡还有 ${levelStats.strengthen} 个汉字需要重点强化，先把容易错的字补起来更划算。`,
+      buttonText: `优先补强（${reviewTotal}）`,
+    }
+  }
+
+  if (reviewTotal > 0) {
+    return {
+      mode: 'review',
+      emoji: '📘',
+      title: `先复习 ${levelName}`,
+      description: `这个关卡还有 ${reviewTotal} 个汉字待复习，先巩固再学新字，记得更稳。`,
+      buttonText: `开始复习（${reviewTotal}）`,
+    }
+  }
+
+  if (levelStats.unlearned > 0) {
+    return {
+      mode: 'normal',
+      emoji: '🌱',
+      title: `继续解锁 ${levelName}`,
+      description: `这个关卡还有 ${levelStats.unlearned} 个汉字还没学过，适合继续往前推进。`,
+      buttonText: '学习新字',
+    }
+  }
+
+  return {
+    mode: 'normal',
+    emoji: '🏆',
+    title: `${levelName} 已完成得不错`,
+    description: '当前关卡已经比较稳了，可以再来一轮巩固手感，或者切换到下一个关卡。',
+    buttonText: '再练一轮',
+  }
+})
+
+const recommendedQuestionCount = computed(() => Math.min(selectedLevelCount.value || 0, 5))
+
+const nextLevelHint = computed(() => {
+  if (!currentLevelProgress.value || !nextLevel.value || !nextLevelProgress.value) return null
+  if (!currentLevelProgress.value.unlocked) return null
+  if (currentLevelProgress.value.ratio < 0.8) return null
+  if (!nextLevelProgress.value.unlocked) return null
+
+  return {
+    emoji: nextLevel.value.emoji,
+    title: `${nextLevel.value.name} 已可挑战`,
+    description: `${selectedLevelMeta.value?.name || '当前关卡'} 已达到升级条件，可以开始挑战下一关了。`,
+    buttonText: `切换到${nextLevel.value.name}`,
+  }
+})
+
+const dailyTaskProgress = computed(() => {
+  const today = getTodayString()
+  const gameDone = checkin.value.lastCheckin === today
+  const reviewDone = (selectedLevelStats.value.review + selectedLevelStats.value.strengthen) === 0
+  const done = Number(gameDone) + Number(reviewDone)
+  const total = 2
+  return {
+    gameDone,
+    reviewDone,
+    done,
+    total,
+    percent: (done / total) * 100,
+  }
+})
+
+const dailyTaskStatus = computed(() => {
+  const progress = dailyTaskProgress.value
+
+  if (progress.done === progress.total) {
+    return {
+      emoji: '🎉',
+      title: '今天的任务完成了',
+      description: '今天已经练过，而且当前关卡该复习的内容也处理得不错，可以轻松收工。',
+    }
+  }
+
+  if (progress.gameDone) {
+    return {
+      emoji: '💪',
+      title: '再冲一下推荐练习',
+      description: '今天已经完成打卡了，再把当前关卡的推荐内容处理掉，今天就很完整。',
+    }
+  }
+
+  return {
+    emoji: '🚀',
+    title: '今天先完成 1 局',
+    description: `先开始一局 ${selectedLevelMeta.value?.name || '当前关卡'} 练习，打卡和今日任务都会一起推进。`,
+  }
+})
+
+function selectLevel(level) {
+  if (!level.unlocked) {
+    errorMsg.value = `先完成上一级 80% 后，才能解锁${level.name}`
+    setTimeout(() => { errorMsg.value = '' }, 2200)
+    return
+  }
+  appState.value = saveAppState({ selectedLevel: level.key })
+}
+
+function goNextLevelFromHome() {
+  if (!nextLevel.value) return
+  appState.value = saveAppState({ selectedLevel: nextLevel.value.key })
+}
+
+function startGame(mode) {
+  router.push({ path: '/game', query: { level: selectedLevel.value, mode } })
+}
 
 function goParent() {
   showPasswordModal.value = false
   router.push('/parent')
 }
+
+async function handleSignOut() {
+  await signOut()
+}
+
+async function onLoginSuccess() {
+  showAuth.value = false
+  await refreshCloudData()
+}
+
+function finishOnboarding() {
+  appState.value = saveAppState({ onboardingDone: true })
+  showOnboarding.value = false
+}
+
+async function refreshCloudData() {
+  if (!isLoggedIn.value) return
+  loading.value = true
+  errorMsg.value = ''
+  try {
+    await syncProgressFromCloud()
+  } catch (error) {
+    errorMsg.value = '云端同步失败，先使用本地进度继续学习吧'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(async () => {
+  recentAchievement.value = consumeRecentAchievement()
+  achievements.value = getAchievements()
+  checkin.value = getCheckinData()
+  if (isLoggedIn.value) {
+    await refreshCloudData()
+  }
+})
 </script>

@@ -1,5 +1,8 @@
+import { isSoundEnabled } from './storage'
+
 // Web Speech API 封装
 export function speak(text, lang = 'zh-CN') {
+  if (!isSoundEnabled()) return
   if (!window.speechSynthesis) return
   window.speechSynthesis.cancel()
   const utter = new SpeechSynthesisUtterance(text)
@@ -11,9 +14,10 @@ export function speak(text, lang = 'zh-CN') {
 
 // 答对音效（用AudioContext生成）
 export function playCorrectSound() {
+  if (!isSoundEnabled()) return
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)()
-    const notes = [523, 659, 784] // C E G
+    const notes = [523, 659, 784]
     notes.forEach((freq, i) => {
       const osc = ctx.createOscillator()
       const gain = ctx.createGain()
@@ -33,6 +37,7 @@ export function playCorrectSound() {
 
 // 答错音效
 export function playWrongSound() {
+  if (!isSoundEnabled()) return
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)()
     const osc = ctx.createOscillator()

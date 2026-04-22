@@ -6,7 +6,8 @@
         <button @click="$router.push('/')" class="text-gray-400 hover:text-gray-600 text-2xl">←</button>
         <div class="flex gap-1">
           <span
-            v-for="i in TOTAL_QUESTIONS" :key="i"
+            v-for="i in questionCount"
+            :key="i"
             class="w-6 h-6 rounded-full transition-all duration-300"
             :class="i <= currentIndex ? 'bg-orange-400' : 'bg-gray-200'"
           ></span>
@@ -93,7 +94,27 @@
           {{ i <= stars ? '⭐' : '☆' }}
         </span>
       </div>
+      <p v-if="checkin.streak > 0" class="text-sm text-orange-400 mb-4 font-bold">
+        🔥 已连续打卡 {{ checkin.streak }} 天
+      </p>
+      <div v-if="nextLevelHint" class="mb-4 rounded-3xl bg-purple-50 border border-purple-100 p-4 text-left">
+        <div class="flex items-start justify-between gap-3 mb-2">
+          <div>
+            <div class="text-sm text-purple-500 font-black mb-1">🚀 升级提示</div>
+            <div class="text-lg font-black text-purple-700">{{ nextLevelHint.title }}</div>
+          </div>
+          <div class="text-3xl">{{ nextLevelHint.emoji }}</div>
+        </div>
+        <p class="text-sm text-purple-600">{{ nextLevelHint.description }}</p>
+      </div>
       <div class="flex flex-col gap-3 w-full">
+        <button
+          v-if="nextLevelHint"
+          @click="goNextLevel"
+          class="btn-primary bg-gradient-to-r from-purple-500 to-indigo-500"
+        >
+          {{ nextLevelHint.buttonText }}
+        </button>
         <button @click="restartGame" class="btn-primary bg-gradient-to-r from-orange-400 to-pink-500">
           🔄 再来一局
         </button>
@@ -111,11 +132,14 @@
       <!-- 星星动画层 -->
       <div class="relative">
         <div
-          v-for="star in flyingStars" :key="star.id"
+          v-for="star in flyingStars"
+          :key="star.id"
           class="fixed text-3xl pointer-events-none z-50"
           :style="{
-            left: star.x + 'px', top: star.y + 'px',
-            '--tx': star.tx + 'px', '--ty': star.ty + 'px',
+            left: star.x + 'px',
+            top: star.y + 'px',
+            '--tx': star.tx + 'px',
+            '--ty': star.ty + 'px',
             animation: 'star-fly 0.8s ease-out forwards'
           }"
         >⭐</div>
@@ -167,7 +191,7 @@
           <span class="text-red-600">{{ currentQ.type === 'char-to-image' ? currentQ.char.emoji : currentQ.char.char }}</span>
         </p>
         <button v-if="feedback !== 'wrong1'" @click="nextQuestion" class="mt-3 btn-secondary bg-orange-400 text-white">
-          {{ currentIndex < TOTAL_QUESTIONS ? '下一题 →' : '看结果 🎉' }}
+          {{ currentIndex < questionCount ? '下一题 →' : '看结果 🎉' }}
         </button>
       </div>
     </div>
@@ -179,8 +203,11 @@ import { ref, computed } from 'vue'
 import { characters } from '../data/characters'
 import { getCharStatus, recordAnswer, saveLearningSession } from '../utils/storage'
 import { speak, playCorrectSound, playWrongSound } from '../utils/speech'
+import { checkinToday, evaluateAchievements, getAchievements, getLevelProgress, saveAppState } from '../utils/progression'
 
 const TOTAL_QUESTIONS = 5
+const route = useRoute()
+const router = useRouter()
 
 const questions = ref([])
 const currentIndex = ref(0)
@@ -195,13 +222,57 @@ const questionResults = ref([])
 const sessionSummary = ref({ newlyMastered: [], needReview: [], needStrengthen: [], correctCount: 0 })
 
 const currentQ = computed(() => questions.value[currentIndex.value] || {})
+const currentLevel = computed(() => route.query.level || 'starter')
+const currentMode = computed(() => (route.query.mode === 'review' ? 'review' : 'normal'))
+const currentLevelMeta = computed(() => getLevelMeta(currentLevel.value))
+const currentLevelIndex = computed(() => levels.findIndex(level => level.key === currentLevel.value))
+const nextLevel = computed(() => levels[currentLevelIndex.value + 1] || null)
+const levelCharacters = computed(() => {
+  const list = getCharactersByLevel(currentLevel.value)
+  return list.length ? list : getCharactersByLevel('starter')
+})
+const questionCount = computed(() => questions.value.length || TOTAL_QUESTIONS)
+const levelProgress = computed(() => getLevelProgress(levels, characters, getCharStatus))
+const currentLevelProgress = computed(() => levelProgress.value.find(level => level.key === currentLevel.value) || null)
+const nextLevelProgress = computed(() => nextLevel.value
+  ? levelProgress.value.find(level => level.key === nextLevel.value.key) || null
+  : null)
+const nextLevelHint = computed(() => {
+  if (!currentLevelProgress.value || !nextLevel.value || !nextLevelProgress.value) return null
+  if (!currentLevelProgress.value.unlocked) return null
+  if (currentLevelProgress.value.ratio < 0.8) return null
+  if (!nextLevelProgress.value.unlocked) return null
+
+  return {
+    emoji: nextLevel.value.emoji,
+    title: `${nextLevel.value.name} 已可挑战`,
+    description: `${currentLevelMeta.value?.name || '当前关卡'} 已达到升级条件，现在可以开始挑战下一关。`,
+    buttonText: `挑战${nextLevel.value.name}`,
+  }
+})
+
+function shuffle(list) {
+  return [...list].sort(() => Math.random() - 0.5)
+}
+
+function buildQuestion(char, pool) {
+  const type = Math.random() > 0.5 ? 'char-to-image' : 'image-to-char'
+  const sameLevelWrongPool = shuffle(pool.filter(c => c.char !== char.char))
+  const fallbackWrongPool = shuffle(
+    characters.filter(c => c.char !== char.char && !sameLevelWrongPool.some(item => item.char === c.char))
+  )
+  const wrongOptions = [...sameLevelWrongPool, ...fallbackWrongPool].slice(0, 2)
+  const options = shuffle([char, ...wrongOptions])
+  return { char, type, options }
+}
 
 function generateQuestions() {
-  const prioritized = characters.filter(c => {
+  const pool = levelCharacters.value
+  const reviewChars = pool.filter(c => {
     const s = getCharStatus(c.char)
     return s === 'strengthen' || s === 'review'
   })
-  const others = characters.filter(c => {
+  const otherChars = pool.filter(c => {
     const s = getCharStatus(c.char)
     return s !== 'strengthen' && s !== 'review'
   })
@@ -304,7 +375,32 @@ function spawnStars() {
       ty: Math.sin(angle) * dist,
     })
   }
-  setTimeout(() => { flyingStars.value = [] }, 900)
+  setTimeout(() => {
+    flyingStars.value = []
+  }, 900)
+}
+
+function finalizeGame() {
+  if (finalized.value) return
+  finalized.value = true
+
+  const gameStats = recordGamePlayed()
+  const checkinResult = checkinToday()
+  checkin.value = checkinResult.data
+
+  const counts = getCounts(characters)
+  const achievementState = evaluateAchievements({
+    stars: stars.value,
+    masteredCount: counts.mastered,
+    reviewCount: counts.review,
+    strengthenCount: counts.strengthen,
+    streak: checkin.value.streak,
+    playedGames: gameStats.playedGames || 0,
+  })
+
+  if (achievementState.recentUnlocked) {
+    recentAchievement.value = getAchievements().find(item => item.id === achievementState.recentUnlocked) || null
+  }
 }
 
 function buildSessionSummary() {
@@ -342,15 +438,21 @@ function nextQuestion() {
   wrongCount.value = 0
 }
 
+function goNextLevel() {
+  if (!nextLevel.value) return
+  saveAppState({ selectedLevel: nextLevel.value.key })
+  router.push({ path: '/game', query: { level: nextLevel.value.key, mode: 'normal' } })
+}
+
 const resultEmoji = computed(() => {
-  if (stars.value === 5) return '🏆'
-  if (stars.value >= 3) return '🎉'
+  if (stars.value === questions.value.length) return '🏆'
+  if (stars.value >= Math.ceil(questions.value.length * 0.6)) return '🎉'
   return '💪'
 })
 
 const resultText = computed(() => {
-  if (stars.value === 5) return '满分！你真是小天才！'
-  if (stars.value >= 3) return '答对了 ' + stars.value + ' 题，继续加油！'
+  if (stars.value === questions.value.length) return '满分！你真是小天才！'
+  if (stars.value >= Math.ceil(questions.value.length * 0.6)) return `答对了 ${stars.value} 题，继续加油！`
   return '没关系，多练习就会了！'
 })
 

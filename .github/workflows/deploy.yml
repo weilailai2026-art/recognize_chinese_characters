@@ -1,42 +1,12 @@
-name: Deploy to GitHub Pages
+# Cloudflare Pages 已配置自动构建，此 workflow 暂时禁用
+# 如需启用 GitHub Actions 部署，取消注释并配置 Secrets
+name: Disabled
 
 on:
-  push:
-    branches: [main]
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
+  workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  placeholder:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps
-
-      - name: Build
-        run: npm run build
-
-      - uses: actions/configure-pages@v5
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-      - uses: actions/deploy-pages@v4
-        id: deployment
+      - run: echo "Use Cloudflare Pages auto-deploy instead"
