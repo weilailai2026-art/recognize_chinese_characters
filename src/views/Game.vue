@@ -267,12 +267,12 @@ function buildQuestion(char, pool) {
 }
 
 function generateQuestions() {
-  const pool = levelCharacters.value
-  const reviewChars = pool.filter(c => {
+  const allPool = levelCharacters.value
+  const prioritized = allPool.filter(c => {
     const s = getCharStatus(c.char)
     return s === 'strengthen' || s === 'review'
   })
-  const otherChars = pool.filter(c => {
+  const others = allPool.filter(c => {
     const s = getCharStatus(c.char)
     return s !== 'strengthen' && s !== 'review'
   })
