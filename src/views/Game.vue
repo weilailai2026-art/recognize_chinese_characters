@@ -90,7 +90,7 @@
       </div>
 
       <div class="flex justify-center gap-1 mb-8">
-        <span v-for="i in TOTAL_QUESTIONS" :key="i" class="text-4xl">
+        <span v-for="i in questionCount" :key="i" class="text-4xl">
           {{ i <= stars ? '⭐' : '☆' }}
         </span>
       </div>
@@ -119,7 +119,7 @@
           🔄 再来一局
         </button>
         <button @click="$router.push('/parent')" class="btn-secondary bg-blue-100 text-blue-600 border-2 border-blue-200">
-          👨👩👧 看家长中心
+          👨‍👩‍👧 看家长中心
         </button>
         <button @click="$router.push('/')" class="btn-secondary bg-white text-gray-500 border-2 border-gray-200">
           🏠 回首页
@@ -127,8 +127,48 @@
       </div>
     </div>
 
+    <!-- 新字预览阶段 -->
+    <div v-else-if="previewMode" class="w-full max-w-md">
+      <div class="text-center mb-4">
+        <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-4 py-1.5 text-sm font-bold text-green-600">
+          🌱 认识新字
+        </span>
+      </div>
+      <div class="bg-white rounded-3xl shadow-xl p-8 mb-6 text-center">
+        <div class="text-6xl mb-4">{{ previewChar.emoji }}</div>
+        <div class="text-lg text-gray-400 mb-2">{{ previewChar.description }}</div>
+        <div class="text-xl text-blue-400 font-bold mb-2">{{ previewChar.pinyin }}</div>
+        <div class="text-[7rem] font-black text-gray-800 leading-none mb-4">{{ previewChar.char }}</div>
+        <button
+          @click="speakChar(previewChar.char)"
+          class="text-4xl hover:scale-110 transition-transform"
+          title="点我听发音"
+        >🔊</button>
+        <p class="mt-3 text-sm text-gray-400">多看几眼，然后点下面的按钮开始答题</p>
+      </div>
+      <button @click="confirmPreview" class="btn-primary w-full bg-gradient-to-r from-green-400 to-teal-500">
+        认识了，开始答题 →
+      </button>
+    </div>
+
     <!-- 题目区域 -->
     <div v-else class="w-full max-w-md">
+      <!-- 题型标签 -->
+      <div class="text-center mb-4">
+        <span
+          v-if="currentQ.isNew"
+          class="inline-flex items-center gap-1 rounded-full bg-green-100 px-4 py-1.5 text-sm font-bold text-green-600"
+        >🌱 新字练习</span>
+        <span
+          v-else-if="currentQ.isStrengthen"
+          class="inline-flex items-center gap-1 rounded-full bg-red-100 px-4 py-1.5 text-sm font-bold text-red-500"
+        >🚑 重点强化</span>
+        <span
+          v-else
+          class="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-4 py-1.5 text-sm font-bold text-yellow-600"
+        >📘 巩固复习</span>
+      </div>
+
       <!-- 星星动画层 -->
       <div class="relative">
         <div
@@ -200,12 +240,16 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { characters } from '../data/characters'
-import { getCharStatus, recordAnswer, saveLearningSession } from '../utils/storage'
+import { useRoute, useRouter } from 'vue-router'
+import { characters, levels, getLevelMeta, getCharactersByLevel } from '../data/characters'
+import { getCharStatus, recordAnswer, saveLearningSession, recordGamePlayed, getCounts } from '../utils/storage'
 import { speak, playCorrectSound, playWrongSound } from '../utils/speech'
 import { checkinToday, evaluateAchievements, getAchievements, getLevelProgress, saveAppState } from '../utils/progression'
 
-const TOTAL_QUESTIONS = 5
+const TOTAL_QUESTIONS = 5      // 单局基础题数
+const MAX_NEW_PER_ROUND = 2    // 每轮最多引入的新字数
+const MAX_STRENGTHEN = 3       // 强化字最多占的题数
+
 const route = useRoute()
 const router = useRouter()
 
@@ -220,6 +264,14 @@ const flyingStars = ref([])
 const wrongCount = ref(0)
 const questionResults = ref([])
 const sessionSummary = ref({ newlyMastered: [], needReview: [], needStrengthen: [], correctCount: 0 })
+const checkin = ref({ streak: 0 })
+const recentAchievement = ref(null)
+const finalized = ref(false)
+
+// 新字预览状态
+const previewMode = ref(false)
+const previewChar = ref(null)
+const pendingPreviewIndex = ref(-1)
 
 const currentQ = computed(() => questions.value[currentIndex.value] || {})
 const currentLevel = computed(() => route.query.level || 'starter')
@@ -255,41 +307,75 @@ function shuffle(list) {
   return [...list].sort(() => Math.random() - 0.5)
 }
 
-function buildQuestion(char, pool) {
-  const type = Math.random() > 0.5 ? 'char-to-image' : 'image-to-char'
-  const sameLevelWrongPool = shuffle(pool.filter(c => c.char !== char.char))
-  const fallbackWrongPool = shuffle(
-    characters.filter(c => c.char !== char.char && !sameLevelWrongPool.some(item => item.char === c.char))
-  )
-  const wrongOptions = [...sameLevelWrongPool, ...fallbackWrongPool].slice(0, 2)
-  const options = shuffle([char, ...wrongOptions])
-  return { char, type, options }
-}
-
+/**
+ * 智能出题 — 学习路径核心逻辑
+ *
+ * 优先级：强化字 > 复习字 > 新字
+ * 模式：
+ *   review  → 只出强化/复习字
+ *   normal  → 强化+复习优先，不够才补新字（新字最多 MAX_NEW_PER_ROUND 道）
+ *
+ * 每道题附带标记：isNew / isStrengthen / isReview
+ */
 function generateQuestions() {
-  const allPool = levelCharacters.value
-  const prioritized = allPool.filter(c => {
-    const s = getCharStatus(c.char)
-    return s === 'strengthen' || s === 'review'
-  })
-  const others = allPool.filter(c => {
-    const s = getCharStatus(c.char)
-    return s !== 'strengthen' && s !== 'review'
-  })
+  const pool = levelCharacters.value
+  const mode = currentMode.value
 
-  const shufflePri = [...prioritized].sort(() => Math.random() - 0.5)
-  const shuffleOth = [...others].sort(() => Math.random() - 0.5)
-  const pool = [...shufflePri, ...shuffleOth].slice(0, TOTAL_QUESTIONS)
+  const strengthen = shuffle(pool.filter(c => getCharStatus(c.char) === 'strengthen'))
+  const review = shuffle(pool.filter(c => getCharStatus(c.char) === 'review'))
+  const unlearned = shuffle(pool.filter(c => getCharStatus(c.char) === 'unlearned'))
+  const mastered = shuffle(pool.filter(c => getCharStatus(c.char) === 'mastered'))
 
-  return pool.map(char => {
+  let selected = []
+
+  if (mode === 'review') {
+    // 复习模式：仅强化+复习字
+    const reviewPool = [...strengthen, ...review]
+    selected = reviewPool.slice(0, TOTAL_QUESTIONS).map(c => ({
+      char: c,
+      isStrengthen: getCharStatus(c.char) === 'strengthen',
+      isReview: getCharStatus(c.char) === 'review',
+      isNew: false,
+    }))
+    // 不够就补掌握字凑题
+    if (selected.length < TOTAL_QUESTIONS) {
+      const extra = mastered.slice(0, TOTAL_QUESTIONS - selected.length)
+      selected = [...selected, ...extra.map(c => ({ char: c, isStrengthen: false, isReview: true, isNew: false }))]
+    }
+  } else {
+    // 普通模式：强化优先，然后复习，最后新字
+    const strengthenSlice = strengthen.slice(0, MAX_STRENGTHEN).map(c => ({
+      char: c, isStrengthen: true, isReview: false, isNew: false,
+    }))
+    const remaining1 = TOTAL_QUESTIONS - strengthenSlice.length
+    const reviewSlice = review.slice(0, remaining1).map(c => ({
+      char: c, isStrengthen: false, isReview: true, isNew: false,
+    }))
+    const remaining2 = TOTAL_QUESTIONS - strengthenSlice.length - reviewSlice.length
+    const newSlice = unlearned.slice(0, Math.min(remaining2, MAX_NEW_PER_ROUND)).map(c => ({
+      char: c, isStrengthen: false, isReview: false, isNew: true,
+    }))
+    const remaining3 = TOTAL_QUESTIONS - strengthenSlice.length - reviewSlice.length - newSlice.length
+    const masteredSlice = mastered.slice(0, remaining3).map(c => ({
+      char: c, isStrengthen: false, isReview: true, isNew: false,
+    }))
+    selected = [...strengthenSlice, ...reviewSlice, ...newSlice, ...masteredSlice].slice(0, TOTAL_QUESTIONS)
+  }
+
+  // 构建完整题目（选项）
+  return selected.map(({ char, isNew, isStrengthen, isReview }) => {
     const type = Math.random() > 0.5 ? 'char-to-image' : 'image-to-char'
-    const wrongPool = characters.filter(c => c.char !== char.char).sort(() => Math.random() - 0.5)
-    const options = [char, ...wrongPool.slice(0, 2)].sort(() => Math.random() - 0.5)
-    return { char, type, options }
+    // 优先从同关卡找干扰项
+    const sameLevelWrong = shuffle(pool.filter(c => c.char !== char.char))
+    const fallbackWrong = shuffle(characters.filter(c => c.char !== char.char && !sameLevelWrong.some(i => i.char === c.char)))
+    const wrongOptions = [...sameLevelWrong, ...fallbackWrong].slice(0, 2)
+    const options = shuffle([char, ...wrongOptions])
+    return { char, type, options, isNew, isStrengthen, isReview }
   })
 }
 
 function restartGame() {
+  finalized.value = false
   questions.value = generateQuestions()
   currentIndex.value = 0
   stars.value = 0
@@ -300,6 +386,29 @@ function restartGame() {
   wrongCount.value = 0
   questionResults.value = []
   sessionSummary.value = { newlyMastered: [], needReview: [], needStrengthen: [], correctCount: 0 }
+  previewMode.value = false
+  previewChar.value = null
+  pendingPreviewIndex.value = -1
+
+  // 如果第一题是新字，先进入预览
+  checkPreview()
+}
+
+/** 检查当前题是否需要先预览 */
+function checkPreview() {
+  const q = questions.value[currentIndex.value]
+  if (q && q.isNew) {
+    previewChar.value = q.char
+    pendingPreviewIndex.value = currentIndex.value
+    previewMode.value = true
+    speakChar(q.char.char)
+  }
+}
+
+function confirmPreview() {
+  previewMode.value = false
+  previewChar.value = null
+  pendingPreviewIndex.value = -1
 }
 
 restartGame()
@@ -384,23 +493,19 @@ function finalizeGame() {
   if (finalized.value) return
   finalized.value = true
 
-  const gameStats = recordGamePlayed()
+  recordGamePlayed()
   const checkinResult = checkinToday()
   checkin.value = checkinResult.data
 
   const counts = getCounts(characters)
-  const achievementState = evaluateAchievements({
+  evaluateAchievements({
     stars: stars.value,
     masteredCount: counts.mastered,
     reviewCount: counts.review,
     strengthenCount: counts.strengthen,
     streak: checkin.value.streak,
-    playedGames: gameStats.playedGames || 0,
+    playedGames: 1,
   })
-
-  if (achievementState.recentUnlocked) {
-    recentAchievement.value = getAchievements().find(item => item.id === achievementState.recentUnlocked) || null
-  }
 }
 
 function buildSessionSummary() {
@@ -416,7 +521,7 @@ function buildSessionSummary() {
   }
 
   saveLearningSession({
-    totalQuestions: TOTAL_QUESTIONS,
+    totalQuestions: questions.value.length,
     stars: stars.value,
     correctCount: sessionSummary.value.correctCount,
     newlyMastered,
@@ -426,8 +531,9 @@ function buildSessionSummary() {
 }
 
 function nextQuestion() {
-  if (currentIndex.value >= TOTAL_QUESTIONS - 1) {
+  if (currentIndex.value >= questionCount.value - 1) {
     buildSessionSummary()
+    finalizeGame()
     gameOver.value = true
     return
   }
@@ -436,6 +542,9 @@ function nextQuestion() {
   feedback.value = null
   selectedOpt.value = null
   wrongCount.value = 0
+
+  // 进入下一题前检查是否需要新字预览
+  checkPreview()
 }
 
 function goNextLevel() {
@@ -445,14 +554,14 @@ function goNextLevel() {
 }
 
 const resultEmoji = computed(() => {
-  if (stars.value === questions.value.length) return '🏆'
-  if (stars.value >= Math.ceil(questions.value.length * 0.6)) return '🎉'
+  if (stars.value === questionCount.value) return '🏆'
+  if (stars.value >= Math.ceil(questionCount.value * 0.6)) return '🎉'
   return '💪'
 })
 
 const resultText = computed(() => {
-  if (stars.value === questions.value.length) return '满分！你真是小天才！'
-  if (stars.value >= Math.ceil(questions.value.length * 0.6)) return `答对了 ${stars.value} 题，继续加油！`
+  if (stars.value === questionCount.value) return '满分！你真是小天才！'
+  if (stars.value >= Math.ceil(questionCount.value * 0.6)) return `答对了 ${stars.value} 题，继续加油！`
   return '没关系，多练习就会了！'
 })
 
@@ -461,7 +570,7 @@ const sessionAdvice = computed(() => {
     return '建议下一轮优先复习红色强化字，连续多玩 1～2 轮，记忆会更稳。'
   }
   if (sessionSummary.value.needReview.length) {
-    return '这一轮整体不错，下一轮把待复习的字再过一遍，容易变成“已掌握”。'
+    return '这一轮整体不错，下一轮把待复习的字再过一遍，容易变成"已掌握"。'
   }
   if (sessionSummary.value.newlyMastered.length) {
     return '这一轮表现很棒，已经有新掌握的字了，可以继续挑战下一轮。'
