@@ -239,12 +239,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { characters, levels, getLevelMeta, getCharactersByLevel } from '../data/characters'
 import { getCharStatus, recordAnswer, saveLearningSession, recordGamePlayed, getCounts } from '../utils/storage'
 import { speak, playCorrectSound, playWrongSound } from '../utils/speech'
 import { checkinToday, evaluateAchievements, getAchievements, getLevelProgress, saveAppState } from '../utils/progression'
+import { isLevelLocked, fetchPremiumStatus } from '../utils/premium'
 
 const TOTAL_QUESTIONS = 5      // 单局基础题数
 const MAX_NEW_PER_ROUND = 2    // 每轮最多引入的新字数
@@ -412,6 +413,13 @@ function confirmPreview() {
 }
 
 restartGame()
+
+onMounted(async () => {
+  await fetchPremiumStatus()
+  if (isLevelLocked(currentLevel.value)) {
+    router.replace({ path: '/', query: { paywall: '1' } })
+  }
+})
 
 function speakChar(char) {
   speak(char)

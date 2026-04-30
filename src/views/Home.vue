@@ -142,11 +142,17 @@
       />
     </div>
   </div>
+
+  <PaywallModal
+    v-if="showPaywall"
+    :showLoginHint="!isLoggedIn"
+    @close="showPaywall = false"
+  />
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { characters, levels, getLevelMeta } from '../data/characters'
 import { getCharStatus, getCounts, getSettings, syncProgressFromCloud } from '../utils/storage'
 import { currentUser, isLoggedIn, signOut } from '../utils/auth'
@@ -164,10 +170,14 @@ import PasswordModal from '../components/PasswordModal.vue'
 import AuthModal from '../components/AuthModal.vue'
 import OnboardingModal from '../components/OnboardingModal.vue'
 import AchievementUnlock from '../components/AchievementUnlock.vue'
+import PaywallModal from '../components/PaywallModal.vue'
+import { isLevelLocked, isPremium, fetchPremiumStatus } from '../utils/premium'
 
 const router = useRouter()
+const route = useRoute()
 const showPasswordModal = ref(false)
 const showAuth = ref(false)
+const showPaywall = ref(false)
 const loading = ref(false)
 const errorMsg = ref('')
 const recentAchievement = ref(null)
@@ -304,6 +314,10 @@ const dailyTaskStatus = computed(() => {
 })
 
 function selectLevel(level) {
+  if (isLevelLocked(level.key)) {
+    showPaywall.value = true
+    return
+  }
   if (!level.unlocked) {
     errorMsg.value = `先完成上一级 80% 后，才能解锁${level.name}`
     setTimeout(() => { errorMsg.value = '' }, 2200)
@@ -353,12 +367,20 @@ async function refreshCloudData() {
   }
 }
 
+watch(currentUser, async () => {
+  await fetchPremiumStatus()
+})
+
 onMounted(async () => {
   recentAchievement.value = consumeRecentAchievement()
   achievements.value = getAchievements()
   checkin.value = getCheckinData()
+  await fetchPremiumStatus()
   if (isLoggedIn.value) {
     await refreshCloudData()
+  }
+  if (route.query.paywall === '1') {
+    showPaywall.value = true
   }
 })
 </script>
