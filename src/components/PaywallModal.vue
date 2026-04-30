@@ -69,6 +69,6 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 
 function handleUnlock() {
-  window.open('https://lemonsqueezy.com', '_blank')
+  window.open('https://weilailaius.lemonsqueezy.com/checkout/buy/7eadb201-f212-4c5e-ae61-1f3295ef46b3', '_blank')
 }
 </script>
