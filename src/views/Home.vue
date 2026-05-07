@@ -1,158 +1,267 @@
 <template>
-  <div class="min-h-screen px-4 py-8 sm:px-6">
-    <div class="mx-auto flex w-full max-w-5xl flex-col gap-6">
-      <!-- Hero -->
-      <section class="relative overflow-hidden rounded-[2rem] bg-white/90 p-6 shadow-xl ring-1 ring-white/70 sm:p-8 lg:p-10">
-        <div class="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-orange-200/50 blur-3xl"></div>
-        <div class="absolute -bottom-12 left-0 h-40 w-40 rounded-full bg-sky-200/50 blur-3xl"></div>
-
-        <div class="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-          <div>
-            <div class="mb-4 inline-flex items-center gap-2 rounded-full bg-orange-100 px-4 py-2 text-sm font-bold text-orange-500">
-              <span>🌟</span>
-              <span>3–6 岁汉字启蒙</span>
-            </div>
-
-            <h1 class="mb-4 text-4xl font-black text-gray-800 sm:text-5xl">认字乐园</h1>
-            <p class="mb-3 text-lg font-bold text-blue-500 sm:text-xl">每天 5 分钟，用游戏方式轻松认识常见汉字</p>
-            <p class="mb-6 max-w-2xl text-base leading-7 text-gray-500 sm:text-lg">
-              给家长一个更省心的识字启蒙工具：孩子点一点就能学，系统会自动记录学习进度，把需要复习和需要强化的字优先安排出来。
-            </p>
-
-            <div class="mb-6 flex flex-wrap gap-3 text-sm font-bold text-gray-600">
-              <div class="rounded-2xl bg-orange-50 px-4 py-3 text-orange-500">⏱️ 每次约 5 分钟</div>
-              <div class="rounded-2xl bg-blue-50 px-4 py-3 text-blue-500">🎮 游戏化互动答题</div>
-              <div class="rounded-2xl bg-green-50 px-4 py-3 text-green-600">🔁 自动复习机制</div>
-            </div>
-
-            <div class="flex flex-col gap-3 sm:flex-row">
-              <button
-                @click="$router.push('/game')"
-                class="btn-primary bg-gradient-to-r from-orange-400 to-pink-500 text-center"
-              >
-                🎮 开始学习
-              </button>
-              <button
-                @click="showPasswordModal = true"
-                class="btn-primary bg-gradient-to-r from-blue-400 to-purple-500 text-center"
-              >
-                👨👩👧 家长中心
-              </button>
-            </div>
-          </div>
-
-          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-            <div class="rounded-3xl bg-gradient-to-br from-yellow-50 to-orange-50 p-5 shadow-sm">
-              <div class="mb-2 text-sm font-bold text-orange-500">适合谁用</div>
-              <div class="text-2xl font-black text-gray-800">学前儿童汉字启蒙</div>
-              <p class="mt-2 text-sm leading-6 text-gray-500">适合刚开始接触常见汉字、喜欢图像和互动游戏的孩子。</p>
-            </div>
-
-            <div class="rounded-3xl bg-gradient-to-br from-sky-50 to-indigo-50 p-5 shadow-sm">
-              <div class="mb-2 text-sm font-bold text-blue-500">家长能看到</div>
-              <div class="text-2xl font-black text-gray-800">进度、复习、强化</div>
-              <p class="mt-2 text-sm leading-6 text-gray-500">不用猜孩子学到了哪一步，打开家长中心就能快速查看。</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Stats -->
-      <section class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div class="rounded-3xl bg-white p-4 text-center shadow-sm">
-          <div class="text-3xl font-black text-green-500">{{ stats.mastered }}</div>
-          <div class="mt-1 text-sm text-gray-400">已掌握</div>
-        </div>
-        <div class="rounded-3xl bg-white p-4 text-center shadow-sm">
-          <div class="text-3xl font-black text-yellow-500">{{ stats.review }}</div>
-          <div class="mt-1 text-sm text-gray-400">需复习</div>
-        </div>
-        <div class="rounded-3xl bg-white p-4 text-center shadow-sm">
-          <div class="text-3xl font-black text-red-500">{{ stats.strengthen }}</div>
-          <div class="mt-1 text-sm text-gray-400">需强化</div>
-        </div>
-        <div class="rounded-3xl bg-white p-4 text-center shadow-sm">
-          <div class="text-3xl font-black text-gray-400">{{ stats.unlearned }}</div>
-          <div class="mt-1 text-sm text-gray-400">未学过</div>
-        </div>
-      </section>
-
-      <!-- Benefits -->
-      <section class="grid gap-4 lg:grid-cols-3">
-        <article class="rounded-3xl bg-white p-6 shadow-sm">
-          <div class="mb-3 text-3xl">📚</div>
-          <h2 class="mb-2 text-xl font-black text-gray-800">认字启蒙更轻松</h2>
-          <p class="text-sm leading-6 text-gray-500">
-            从孩子熟悉的数字、颜色、动物、家庭成员等常见内容入手，降低识字门槛。
-          </p>
-        </article>
-
-        <article class="rounded-3xl bg-white p-6 shadow-sm">
-          <div class="mb-3 text-3xl">🧠</div>
-          <h2 class="mb-2 text-xl font-black text-gray-800">边玩边记，不容易枯燥</h2>
-          <p class="text-sm leading-6 text-gray-500">
-            看字选图、看图选字两种互动题型交替出现，让孩子在游戏反馈里自然重复记忆。
-          </p>
-        </article>
-
-        <article class="rounded-3xl bg-white p-6 shadow-sm">
-          <div class="mb-3 text-3xl">📈</div>
-          <h2 class="mb-2 text-xl font-black text-gray-800">自动记录学习进度</h2>
-          <p class="text-sm leading-6 text-gray-500">
-            系统会把孩子答题结果分成已掌握、需复习、需强化，帮助家长快速知道下一步重点。
-          </p>
-        </article>
-      </section>
-
-      <!-- Steps -->
-      <section class="rounded-[2rem] bg-white p-6 shadow-sm sm:p-8">
-        <div class="mb-5 flex items-center justify-between gap-4">
-          <div>
-            <p class="text-sm font-bold text-purple-500">怎么使用</p>
-            <h2 class="text-2xl font-black text-gray-800">三步开始识字练习</h2>
-          </div>
-          <div class="hidden rounded-2xl bg-purple-50 px-4 py-2 text-sm font-bold text-purple-500 sm:block">共 {{ total }} 个常见汉字</div>
-        </div>
-
-        <div class="grid gap-4 md:grid-cols-3">
-          <div class="rounded-3xl bg-orange-50 p-5">
-            <div class="mb-3 text-sm font-black text-orange-500">STEP 1</div>
-            <h3 class="mb-2 text-lg font-black text-gray-800">开始学习</h3>
-            <p class="text-sm leading-6 text-gray-500">点击“开始学习”，进入一轮轻量练习，适合碎片时间完成。</p>
-          </div>
-          <div class="rounded-3xl bg-blue-50 p-5">
-            <div class="mb-3 text-sm font-black text-blue-500">STEP 2</div>
-            <h3 class="mb-2 text-lg font-black text-gray-800">听、看、选</h3>
-            <p class="text-sm leading-6 text-gray-500">孩子通过图像、拼音和发音提示完成题目，形成多感官记忆。</p>
-          </div>
-          <div class="rounded-3xl bg-green-50 p-5">
-            <div class="mb-3 text-sm font-black text-green-600">STEP 3</div>
-            <h3 class="mb-2 text-lg font-black text-gray-800">家长查看进度</h3>
-            <p class="text-sm leading-6 text-gray-500">在家长中心查看掌握情况，把复习重点留给真正容易错的字。</p>
-          </div>
-        </div>
-      </section>
-
-      <p class="text-center text-sm text-gray-400">认字乐园 · 让孩子每天进步一点点 ✨</p>
-
-      <PasswordModal
-        v-if="showPasswordModal"
-        @close="showPasswordModal = false"
-        @success="goParent"
-      />
+  <div class="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-b from-orange-50 via-yellow-50 to-pink-50">
+    <div v-if="loading" class="mb-6 text-sm text-orange-500 bg-orange-100 px-4 py-2 rounded-full font-bold">
+      正在准备学习数据...
     </div>
-  </div>
 
-  <PaywallModal
-    v-if="showPaywall"
-    :showLoginHint="!isLoggedIn"
-    @close="showPaywall = false"
-  />
+    <div class="absolute top-4 right-4">
+      <button
+        v-if="!isLoggedIn"
+        @click="openAuthModal"
+        class="text-sm bg-white shadow rounded-2xl px-4 py-2 text-orange-500 font-bold hover:scale-105 transition-all"
+      >
+        🔑 登录 / 注册
+      </button>
+      <div v-else class="flex items-center gap-2">
+        <span class="text-sm text-gray-400 bg-white shadow rounded-2xl px-3 py-2">
+          👤 {{ userEmail }}
+        </span>
+        <button @click="handleSignOut" class="text-sm text-gray-400 hover:text-red-400 font-bold">退出</button>
+      </div>
+    </div>
+
+    <div class="absolute top-4 left-4 flex flex-col gap-2">
+      <div v-if="isLoggedIn" class="text-xs text-green-500 bg-green-50 rounded-xl px-3 py-1 font-bold">
+        ☁️ 进度云同步中
+      </div>
+      <div v-if="!soundEnabled" class="text-xs text-gray-500 bg-white/90 rounded-xl px-3 py-1 font-bold shadow-sm">
+        🔇 当前已静音，可在家长中心开启声音
+      </div>
+    </div>
+
+    <div class="text-center mb-6 animate-bounce-in">
+      <div class="text-8xl mb-4">🌟</div>
+      <h1 class="text-5xl font-black text-orange-500 mb-2">认字乐园</h1>
+      <p class="text-xl text-blue-400 font-bold">快乐学汉字，天天进步！</p>
+      <p class="mt-3 text-sm text-gray-500 max-w-md">
+        先让孩子愿意学，再慢慢学得住。每天几分钟，用游戏方式把常见汉字一点点吃下来。
+      </p>
+    </div>
+
+    <div class="w-full max-w-md mb-6 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-3xl shadow-lg p-5">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <div class="text-sm font-black opacity-90 mb-1">💰 最小变现入口</div>
+          <div class="text-2xl font-black">{{ pricing.productName }}</div>
+        </div>
+        <div class="text-3xl">🎁</div>
+      </div>
+      <div class="flex items-end gap-2 mb-2">
+        <span class="text-3xl font-black">{{ pricing.priceLabel }}</span>
+        <span v-if="pricing.originalPriceLabel" class="text-sm opacity-70 line-through">{{ pricing.originalPriceLabel }}</span>
+      </div>
+      <p class="text-sm opacity-90 mb-4">{{ pricing.benefitSummary }}</p>
+      <div class="grid grid-cols-3 gap-2 text-xs mb-4">
+        <div class="bg-white/15 rounded-2xl px-3 py-2 font-bold text-center">完整关卡</div>
+        <div class="bg-white/15 rounded-2xl px-3 py-2 font-bold text-center">云端同步</div>
+        <div class="bg-white/15 rounded-2xl px-3 py-2 font-bold text-center">持续更新</div>
+      </div>
+      <button
+        @click="handleCheckout"
+        class="w-full rounded-2xl bg-white text-orange-500 font-black py-3 hover:scale-[1.01] transition-all"
+      >
+        {{ hasCheckoutLink ? pricing.ctaLabel : '待接入支付链接' }}
+      </button>
+      <p class="mt-3 text-xs opacity-80">
+        当前目标：先把“访问 → 注册/登录 → 点击购买 → 支付成功 → 回流继续使用”这条链路跑通。
+      </p>
+    </div>
+
+    <div class="w-full max-w-md mb-6 bg-white rounded-3xl shadow-lg p-5">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <div class="text-sm text-gray-400">当前等级</div>
+          <div class="text-2xl font-black text-purple-600">{{ userLevel.icon }} {{ userLevel.name }}</div>
+        </div>
+        <div class="text-right">
+          <div class="text-sm text-gray-400">连续打卡</div>
+          <div class="text-2xl font-black text-orange-500">🔥 {{ checkin.streak }}</div>
+        </div>
+      </div>
+      <div v-if="userLevel.next" class="text-xs text-gray-400 mb-2">
+        再掌握 {{ Math.max(userLevel.next - stats.mastered, 0) }} 个汉字即可升级
+      </div>
+      <div class="h-3 rounded-full bg-gray-100 overflow-hidden">
+        <div
+          class="h-full bg-gradient-to-r from-orange-400 to-pink-500 transition-all"
+          :style="{ width: levelProgressWidth + '%' }"
+        ></div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-4 gap-3 mb-6 w-full max-w-md">
+      <div class="bg-white rounded-2xl px-3 py-3 shadow text-center">
+        <div class="text-2xl font-black text-green-500">{{ stats.mastered }}</div>
+        <div class="text-xs text-gray-400">已掌握</div>
+      </div>
+      <div class="bg-white rounded-2xl px-3 py-3 shadow text-center">
+        <div class="text-2xl font-black text-yellow-500">{{ stats.review }}</div>
+        <div class="text-xs text-gray-400">需复习</div>
+      </div>
+      <div class="bg-white rounded-2xl px-3 py-3 shadow text-center">
+        <div class="text-2xl font-black text-red-500">{{ stats.strengthen }}</div>
+        <div class="text-xs text-gray-400">需强化</div>
+      </div>
+      <div class="bg-white rounded-2xl px-3 py-3 shadow text-center">
+        <div class="text-2xl font-black text-gray-400">{{ stats.unlearned }}</div>
+        <div class="text-xs text-gray-400">未学过</div>
+      </div>
+    </div>
+
+    <div v-if="nextLevelHint" class="w-full max-w-md mb-6 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-3xl shadow-lg p-5">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <div class="text-sm font-black opacity-90 mb-1">🚀 升级提示</div>
+          <div class="text-lg font-black">{{ nextLevelHint.title }}</div>
+        </div>
+        <div class="text-3xl">{{ nextLevelHint.emoji }}</div>
+      </div>
+      <p class="text-sm opacity-90 mb-4">{{ nextLevelHint.description }}</p>
+      <button
+        @click="goNextLevelFromHome"
+        class="w-full rounded-2xl bg-white text-purple-600 font-black py-3 hover:scale-[1.01] transition-all"
+      >
+        {{ nextLevelHint.buttonText }}
+      </button>
+    </div>
+
+    <div class="w-full max-w-md mb-6 bg-white rounded-3xl shadow-lg p-5 border border-emerald-100">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <div class="text-sm text-emerald-500 font-black mb-1">✅ 今日任务完成度</div>
+          <div class="text-lg font-black text-gray-800">{{ dailyTaskStatus.title }}</div>
+        </div>
+        <div class="text-3xl">{{ dailyTaskStatus.emoji }}</div>
+      </div>
+      <p class="text-sm text-gray-500 mb-4">{{ dailyTaskStatus.description }}</p>
+      <div class="mb-3 flex items-center justify-between text-xs text-gray-400">
+        <span>今日进度</span>
+        <span>{{ dailyTaskProgress.done }}/{{ dailyTaskProgress.total }}</span>
+      </div>
+      <div class="h-3 rounded-full bg-gray-100 overflow-hidden mb-4">
+        <div
+          class="h-full bg-gradient-to-r from-emerald-400 to-green-500 transition-all"
+          :style="{ width: dailyTaskProgress.percent + '%' }"
+        ></div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <div class="rounded-2xl px-3 py-2 font-bold"
+             :class="dailyTaskProgress.gameDone ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'">
+          {{ dailyTaskProgress.gameDone ? '✅ 今天已练过' : '🎮 今天先完成 1 局' }}
+        </div>
+        <div class="rounded-2xl px-3 py-2 font-bold"
+             :class="dailyTaskProgress.reviewDone ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'">
+          {{ dailyTaskProgress.reviewDone ? '✅ 当前关卡较稳' : '📘 还可继续处理推荐任务' }}
+        </div>
+      </div>
+    </div>
+
+    <div class="w-full max-w-md mb-6 bg-white rounded-3xl shadow-lg p-5 border border-orange-100">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <div class="text-sm text-orange-400 font-black mb-1">✨ 今日推荐练习</div>
+          <div class="text-lg font-black text-gray-800">{{ recommendedPlan.title }}</div>
+        </div>
+        <div class="text-3xl">{{ recommendedPlan.emoji }}</div>
+      </div>
+      <p class="text-sm text-gray-500 mb-4">{{ recommendedPlan.description }}</p>
+      <div class="flex items-center gap-2 text-xs mb-4 flex-wrap">
+        <span class="px-3 py-1 rounded-full bg-orange-50 text-orange-500 font-bold">
+          当前关卡：{{ selectedLevelMeta?.name || '启蒙级' }}
+        </span>
+        <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-500 font-bold">
+          推荐题数：{{ recommendedQuestionCount }} 题
+        </span>
+      </div>
+      <button
+        @click="startGame(recommendedPlan.mode)"
+        class="w-full btn-primary text-center"
+        :class="recommendedPlan.mode === 'review'
+          ? 'bg-gradient-to-r from-blue-400 to-purple-500'
+          : 'bg-gradient-to-r from-orange-400 to-pink-500'"
+      >
+        {{ recommendedPlan.buttonText }}
+      </button>
+    </div>
+
+    <div class="w-full max-w-md mb-6">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-black text-gray-700">选择学习关卡</h2>
+        <span class="text-xs text-gray-400">共 {{ total }} 个汉字</span>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <button
+          v-for="level in levelProgress"
+          :key="level.key"
+          @click="selectLevel(level)"
+          class="rounded-3xl p-4 text-left shadow transition-all border-2"
+          :class="selectedLevel === level.key ? 'border-orange-400 bg-orange-50 scale-[1.02]' : 'border-transparent bg-white'"
+        >
+          <div class="flex items-center justify-between mb-2">
+            <div class="text-2xl">{{ level.emoji }}</div>
+            <div v-if="!level.unlocked" class="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">未解锁</div>
+          </div>
+          <div class="font-black text-gray-800 mb-1">{{ level.name }}</div>
+          <div class="text-xs text-gray-500 mb-2">{{ level.description }}</div>
+          <div class="text-xs text-gray-400">已掌握 {{ level.mastered }}/{{ level.total }}</div>
+          <div class="h-2 rounded-full bg-gray-100 overflow-hidden mt-2">
+            <div class="h-full bg-gradient-to-r from-green-400 to-emerald-500" :style="{ width: (level.ratio * 100) + '%' }"></div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-4 w-full max-w-md">
+      <button
+        @click="startGame('normal')"
+        class="btn-primary bg-gradient-to-r from-orange-400 to-pink-500 text-center"
+      >
+        🎮 开始学习
+      </button>
+      <button
+        @click="startGame('review')"
+        class="btn-primary bg-gradient-to-r from-blue-400 to-purple-500 text-center"
+      >
+        📘 专项复习（{{ stats.review + stats.strengthen }}）
+      </button>
+      <button
+        @click="showPasswordModal = true"
+        class="btn-primary bg-white text-gray-600 border-2 border-gray-200 text-center"
+      >
+        👨👩👧 家长中心
+      </button>
+    </div>
+
+    <div v-if="!isLoggedIn" class="mt-6 text-center">
+      <p class="text-gray-400 text-xs">
+        💡 <button @click="openAuthModal" class="text-orange-400 underline font-bold">登录</button> 后可跨设备同步学习进度
+      </p>
+    </div>
+
+    <p class="mt-4 text-gray-400 text-sm">当前关卡 {{ selectedLevelMeta?.name || '启蒙级' }} · 共 {{ selectedLevelCount }} 个汉字</p>
+
+    <div v-if="errorMsg" class="mt-3 text-sm text-red-500 bg-red-50 px-4 py-2 rounded-2xl">{{ errorMsg }}</div>
+
+    <PasswordModal
+      v-if="showPasswordModal"
+      @close="showPasswordModal = false"
+      @success="goParent"
+    />
+
+    <AuthModal
+      v-if="showAuth"
+      @close="showAuth = false"
+      @success="onLoginSuccess"
+    />
+
+    <OnboardingModal v-if="showOnboarding" @finish="finishOnboarding" />
+    <AchievementUnlock :achievement="recentAchievement" @close="recentAchievement = null" />
+  </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { characters, levels, getLevelMeta } from '../data/characters'
 import { getCharStatus, getCounts, getSettings, syncProgressFromCloud } from '../utils/storage'
 import { currentUser, isLoggedIn, signOut } from '../utils/auth'
@@ -166,18 +275,19 @@ import {
   getUserLevelTitle,
   saveAppState,
 } from '../utils/progression'
+import { trackEvent } from '../utils/analytics'
+import { appConfig, hasCheckout } from '../config'
 import PasswordModal from '../components/PasswordModal.vue'
 import AuthModal from '../components/AuthModal.vue'
 import OnboardingModal from '../components/OnboardingModal.vue'
 import AchievementUnlock from '../components/AchievementUnlock.vue'
-import PaywallModal from '../components/PaywallModal.vue'
-import { isLevelLocked, isPremium, fetchPremiumStatus } from '../utils/premium'
+import ProModal from '../components/ProModal.vue'
+import { subscriptionStatus, fetchSubscriptionStatus, isLevelUnlocked, isPro } from '../utils/subscription'
 
 const router = useRouter()
-const route = useRoute()
 const showPasswordModal = ref(false)
 const showAuth = ref(false)
-const showPaywall = ref(false)
+const showProModal = ref(false)
 const loading = ref(false)
 const errorMsg = ref('')
 const recentAchievement = ref(null)
@@ -186,6 +296,8 @@ const checkin = ref(getCheckinData())
 const achievements = ref(getAchievements())
 const showOnboarding = ref(!appState.value.onboardingDone)
 const soundEnabled = computed(() => getSettings().sound !== false)
+const pricing = computed(() => appConfig.pricing)
+const hasCheckoutLink = computed(() => hasCheckout())
 
 const total = characters.length
 const selectedLevel = computed(() => appState.value.selectedLevel || 'starter')
@@ -314,44 +426,68 @@ const dailyTaskStatus = computed(() => {
 })
 
 function selectLevel(level) {
-  if (isLevelLocked(level.key)) {
-    showPaywall.value = true
-    return
-  }
   if (!level.unlocked) {
     errorMsg.value = `先完成上一级 80% 后，才能解锁${level.name}`
     setTimeout(() => { errorMsg.value = '' }, 2200)
     return
   }
   appState.value = saveAppState({ selectedLevel: level.key })
+  trackEvent('level_selected', { level: level.key })
 }
 
 function goNextLevelFromHome() {
   if (!nextLevel.value) return
   appState.value = saveAppState({ selectedLevel: nextLevel.value.key })
+  trackEvent('next_level_click', { from: selectedLevel.value, to: nextLevel.value.key, source: 'home' })
 }
 
 function startGame(mode) {
+  trackEvent('start_game_click', { mode, level: selectedLevel.value })
   router.push({ path: '/game', query: { level: selectedLevel.value, mode } })
 }
 
 function goParent() {
   showPasswordModal.value = false
+  trackEvent('open_parent_center')
   router.push('/parent')
 }
 
 async function handleSignOut() {
+  trackEvent('sign_out_click')
   await signOut()
 }
 
 async function onLoginSuccess() {
   showAuth.value = false
+  trackEvent('auth_success')
   await refreshCloudData()
 }
 
 function finishOnboarding() {
   appState.value = saveAppState({ onboardingDone: true })
   showOnboarding.value = false
+  trackEvent('onboarding_finished')
+}
+
+function openAuthModal() {
+  showAuth.value = true
+  trackEvent('auth_modal_open')
+}
+
+function handleCheckout() {
+  trackEvent('checkout_click', {
+    hasCheckout: hasCheckoutLink.value,
+    level: selectedLevel.value,
+    loggedIn: isLoggedIn.value,
+  })
+
+  if (!hasCheckoutLink.value) {
+    errorMsg.value = '还没配置支付链接，请先补 VITE_CHECKOUT_URL'
+    setTimeout(() => { errorMsg.value = '' }, 2500)
+    return
+  }
+
+  window.open(pricing.value.checkoutUrl, '_blank', 'noopener,noreferrer')
 }
 
 async function refreshCloudData() {
@@ -367,20 +503,16 @@ async function refreshCloudData() {
   }
 }
 
-watch(currentUser, async () => {
-  await fetchPremiumStatus()
-})
-
 onMounted(async () => {
+  trackEvent('home_view', {
+    loggedIn: isLoggedIn.value,
+    selectedLevel: selectedLevel.value,
+  })
   recentAchievement.value = consumeRecentAchievement()
   achievements.value = getAchievements()
   checkin.value = getCheckinData()
-  await fetchPremiumStatus()
   if (isLoggedIn.value) {
     await refreshCloudData()
-  }
-  if (route.query.paywall === '1') {
-    showPaywall.value = true
   }
 })
 </script>
