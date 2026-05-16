@@ -49,7 +49,7 @@
       </div>
       <div class="flex items-end gap-2 mb-2">
         <span class="text-3xl font-black">$9.9/月</span>
-        <span class="text-sm opacity-70">或 $99/年</span>
+        <span class="text-sm opacity-70">或 $19.9/年</span>
       </div>
       <p class="text-sm opacity-90 mb-4">解锁全部 500+ 汉字 + 云端同步 + 持续更新</p>
       <div class="grid grid-cols-3 gap-2 text-xs mb-4">

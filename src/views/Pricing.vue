@@ -85,11 +85,11 @@
           <div class="text-center mb-6">
             <h3 class="text-2xl font-bold text-gray-900 mb-2">年度会员</h3>
             <div class="flex items-baseline justify-center">
-              <span class="text-5xl font-bold text-blue-600">$99</span>
+              <span class="text-5xl font-bold text-blue-600">$19.9</span>
               <span class="text-gray-600 ml-2">/年</span>
             </div>
             <p class="text-green-600 font-semibold mt-2">
-              相当于每月 $8.25，节省 17%
+              相当于每月 $1.66，节省 83%
             </p>
           </div>
           

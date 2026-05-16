@@ -28,7 +28,7 @@ const PLANS = {
   yearly: {
     id: 'yearly',
     name: '年度会员',
-    price: 99,
+    price: 19.9,
     currency: 'USD',
     duration: 365,
   },
