@@ -38,33 +38,31 @@
       </p>
     </div>
 
+    <!-- PayPal 会员卡片 -->
     <div class="w-full max-w-md mb-6 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-3xl shadow-lg p-5">
       <div class="flex items-start justify-between gap-3 mb-3">
         <div>
-          <div class="text-sm font-black opacity-90 mb-1">💰 最小变现入口</div>
-          <div class="text-2xl font-black">{{ pricing.productName }}</div>
+          <div class="text-sm font-black opacity-90 mb-1">💰 升级会员</div>
+          <div class="text-2xl font-black">认字乐园 Pro</div>
         </div>
         <div class="text-3xl">🎁</div>
       </div>
       <div class="flex items-end gap-2 mb-2">
-        <span class="text-3xl font-black">{{ pricing.priceLabel }}</span>
-        <span v-if="pricing.originalPriceLabel" class="text-sm opacity-70 line-through">{{ pricing.originalPriceLabel }}</span>
+        <span class="text-3xl font-black">$9.9/月</span>
+        <span class="text-sm opacity-70">或 $99/年</span>
       </div>
-      <p class="text-sm opacity-90 mb-4">{{ pricing.benefitSummary }}</p>
+      <p class="text-sm opacity-90 mb-4">解锁全部 500+ 汉字 + 云端同步 + 持续更新</p>
       <div class="grid grid-cols-3 gap-2 text-xs mb-4">
-        <div class="bg-white/15 rounded-2xl px-3 py-2 font-bold text-center">完整关卡</div>
+        <div class="bg-white/15 rounded-2xl px-3 py-2 font-bold text-center">完整字库</div>
         <div class="bg-white/15 rounded-2xl px-3 py-2 font-bold text-center">云端同步</div>
         <div class="bg-white/15 rounded-2xl px-3 py-2 font-bold text-center">持续更新</div>
       </div>
       <button
-        @click="handleCheckout"
+        @click="goToPricing"
         class="w-full rounded-2xl bg-white text-orange-500 font-black py-3 hover:scale-[1.01] transition-all"
       >
-        {{ hasCheckoutLink ? pricing.ctaLabel : '待接入支付链接' }}
+        立即开通 Pro
       </button>
-      <p class="mt-3 text-xs opacity-80">
-        当前目标：先把“访问 → 注册/登录 → 点击购买 → 支付成功 → 回流继续使用”这条链路跑通。
-      </p>
     </div>
 
     <div class="w-full max-w-md mb-6 bg-white rounded-3xl shadow-lg p-5">
@@ -106,82 +104,6 @@
         <div class="text-2xl font-black text-gray-400">{{ stats.unlearned }}</div>
         <div class="text-xs text-gray-400">未学过</div>
       </div>
-    </div>
-
-    <div v-if="nextLevelHint" class="w-full max-w-md mb-6 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-3xl shadow-lg p-5">
-      <div class="flex items-start justify-between gap-3 mb-3">
-        <div>
-          <div class="text-sm font-black opacity-90 mb-1">🚀 升级提示</div>
-          <div class="text-lg font-black">{{ nextLevelHint.title }}</div>
-        </div>
-        <div class="text-3xl">{{ nextLevelHint.emoji }}</div>
-      </div>
-      <p class="text-sm opacity-90 mb-4">{{ nextLevelHint.description }}</p>
-      <button
-        @click="goNextLevelFromHome"
-        class="w-full rounded-2xl bg-white text-purple-600 font-black py-3 hover:scale-[1.01] transition-all"
-      >
-        {{ nextLevelHint.buttonText }}
-      </button>
-    </div>
-
-    <div class="w-full max-w-md mb-6 bg-white rounded-3xl shadow-lg p-5 border border-emerald-100">
-      <div class="flex items-start justify-between gap-3 mb-3">
-        <div>
-          <div class="text-sm text-emerald-500 font-black mb-1">✅ 今日任务完成度</div>
-          <div class="text-lg font-black text-gray-800">{{ dailyTaskStatus.title }}</div>
-        </div>
-        <div class="text-3xl">{{ dailyTaskStatus.emoji }}</div>
-      </div>
-      <p class="text-sm text-gray-500 mb-4">{{ dailyTaskStatus.description }}</p>
-      <div class="mb-3 flex items-center justify-between text-xs text-gray-400">
-        <span>今日进度</span>
-        <span>{{ dailyTaskProgress.done }}/{{ dailyTaskProgress.total }}</span>
-      </div>
-      <div class="h-3 rounded-full bg-gray-100 overflow-hidden mb-4">
-        <div
-          class="h-full bg-gradient-to-r from-emerald-400 to-green-500 transition-all"
-          :style="{ width: dailyTaskProgress.percent + '%' }"
-        ></div>
-      </div>
-      <div class="grid grid-cols-2 gap-2 text-xs">
-        <div class="rounded-2xl px-3 py-2 font-bold"
-             :class="dailyTaskProgress.gameDone ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'">
-          {{ dailyTaskProgress.gameDone ? '✅ 今天已练过' : '🎮 今天先完成 1 局' }}
-        </div>
-        <div class="rounded-2xl px-3 py-2 font-bold"
-             :class="dailyTaskProgress.reviewDone ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'">
-          {{ dailyTaskProgress.reviewDone ? '✅ 当前关卡较稳' : '📘 还可继续处理推荐任务' }}
-        </div>
-      </div>
-    </div>
-
-    <div class="w-full max-w-md mb-6 bg-white rounded-3xl shadow-lg p-5 border border-orange-100">
-      <div class="flex items-start justify-between gap-3 mb-3">
-        <div>
-          <div class="text-sm text-orange-400 font-black mb-1">✨ 今日推荐练习</div>
-          <div class="text-lg font-black text-gray-800">{{ recommendedPlan.title }}</div>
-        </div>
-        <div class="text-3xl">{{ recommendedPlan.emoji }}</div>
-      </div>
-      <p class="text-sm text-gray-500 mb-4">{{ recommendedPlan.description }}</p>
-      <div class="flex items-center gap-2 text-xs mb-4 flex-wrap">
-        <span class="px-3 py-1 rounded-full bg-orange-50 text-orange-500 font-bold">
-          当前关卡：{{ selectedLevelMeta?.name || '启蒙级' }}
-        </span>
-        <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-500 font-bold">
-          推荐题数：{{ recommendedQuestionCount }} 题
-        </span>
-      </div>
-      <button
-        @click="startGame(recommendedPlan.mode)"
-        class="w-full btn-primary text-center"
-        :class="recommendedPlan.mode === 'review'
-          ? 'bg-gradient-to-r from-blue-400 to-purple-500'
-          : 'bg-gradient-to-r from-orange-400 to-pink-500'"
-      >
-        {{ recommendedPlan.buttonText }}
-      </button>
     </div>
 
     <div class="w-full max-w-md mb-6">
@@ -271,23 +193,18 @@ import {
   getAppState,
   getCheckinData,
   getLevelProgress,
-  getTodayString,
   getUserLevelTitle,
   saveAppState,
 } from '../utils/progression'
 import { trackEvent } from '../utils/analytics'
-import { appConfig, hasCheckout } from '../config'
 import PasswordModal from '../components/PasswordModal.vue'
 import AuthModal from '../components/AuthModal.vue'
 import OnboardingModal from '../components/OnboardingModal.vue'
 import AchievementUnlock from '../components/AchievementUnlock.vue'
-import ProModal from '../components/ProModal.vue'
-import { subscriptionStatus, fetchSubscriptionStatus, isLevelUnlocked, isPro } from '../utils/subscription'
 
 const router = useRouter()
 const showPasswordModal = ref(false)
 const showAuth = ref(false)
-const showProModal = ref(false)
 const loading = ref(false)
 const errorMsg = ref('')
 const recentAchievement = ref(null)
@@ -296,133 +213,24 @@ const checkin = ref(getCheckinData())
 const achievements = ref(getAchievements())
 const showOnboarding = ref(!appState.value.onboardingDone)
 const soundEnabled = computed(() => getSettings().sound !== false)
-const pricing = computed(() => appConfig.pricing)
-const hasCheckoutLink = computed(() => hasCheckout())
 
 const total = characters.length
 const selectedLevel = computed(() => appState.value.selectedLevel || 'starter')
 const selectedLevelMeta = computed(() => getLevelMeta(selectedLevel.value))
-const selectedLevelIndex = computed(() => levels.findIndex(level => level.key === selectedLevel.value))
-const nextLevel = computed(() => levels[selectedLevelIndex.value + 1] || null)
 const selectedLevelChars = computed(() => characters.filter(item => item.level === selectedLevel.value))
 const selectedLevelCount = computed(() => selectedLevelChars.value.length)
-const selectedLevelStats = computed(() => getCounts(selectedLevelChars.value))
 
 const userEmail = computed(() => currentUser.value?.email?.split('@')[0] || '')
 const stats = computed(() => getCounts(characters))
 const userLevel = computed(() => getUserLevelTitle(stats.value.mastered))
 const levelProgress = computed(() => getLevelProgress(levels, characters, getCharStatus))
-const currentLevelProgress = computed(() => levelProgress.value.find(level => level.key === selectedLevel.value) || null)
-const nextLevelProgress = computed(() => nextLevel.value
-  ? levelProgress.value.find(level => level.key === nextLevel.value.key) || null
-  : null)
+
 const levelProgressWidth = computed(() => {
   if (!userLevel.value.next) return 100
   const prevThreshold = userLevel.value.next === 10 ? 0 : userLevel.value.next === 30 ? 10 : userLevel.value.next === 60 ? 30 : 60
   const span = userLevel.value.next - prevThreshold
   const current = Math.max(stats.value.mastered - prevThreshold, 0)
   return Math.min((current / span) * 100, 100)
-})
-
-const recommendedPlan = computed(() => {
-  const levelName = selectedLevelMeta.value?.name || '当前关卡'
-  const levelStats = selectedLevelStats.value
-  const reviewTotal = levelStats.review + levelStats.strengthen
-
-  if (levelStats.strengthen > 0) {
-    return {
-      mode: 'review',
-      emoji: '🚑',
-      title: `先补强 ${levelName}`,
-      description: `这个关卡还有 ${levelStats.strengthen} 个汉字需要重点强化，先把容易错的字补起来更划算。`,
-      buttonText: `优先补强（${reviewTotal}）`,
-    }
-  }
-
-  if (reviewTotal > 0) {
-    return {
-      mode: 'review',
-      emoji: '📘',
-      title: `先复习 ${levelName}`,
-      description: `这个关卡还有 ${reviewTotal} 个汉字待复习，先巩固再学新字，记得更稳。`,
-      buttonText: `开始复习（${reviewTotal}）`,
-    }
-  }
-
-  if (levelStats.unlearned > 0) {
-    return {
-      mode: 'normal',
-      emoji: '🌱',
-      title: `继续解锁 ${levelName}`,
-      description: `这个关卡还有 ${levelStats.unlearned} 个汉字还没学过，适合继续往前推进。`,
-      buttonText: '学习新字',
-    }
-  }
-
-  return {
-    mode: 'normal',
-    emoji: '🏆',
-    title: `${levelName} 已完成得不错`,
-    description: '当前关卡已经比较稳了，可以再来一轮巩固手感，或者切换到下一个关卡。',
-    buttonText: '再练一轮',
-  }
-})
-
-const recommendedQuestionCount = computed(() => Math.min(selectedLevelCount.value || 0, 5))
-
-const nextLevelHint = computed(() => {
-  if (!currentLevelProgress.value || !nextLevel.value || !nextLevelProgress.value) return null
-  if (!currentLevelProgress.value.unlocked) return null
-  if (currentLevelProgress.value.ratio < 0.8) return null
-  if (!nextLevelProgress.value.unlocked) return null
-
-  return {
-    emoji: nextLevel.value.emoji,
-    title: `${nextLevel.value.name} 已可挑战`,
-    description: `${selectedLevelMeta.value?.name || '当前关卡'} 已达到升级条件，可以开始挑战下一关了。`,
-    buttonText: `切换到${nextLevel.value.name}`,
-  }
-})
-
-const dailyTaskProgress = computed(() => {
-  const today = getTodayString()
-  const gameDone = checkin.value.lastCheckin === today
-  const reviewDone = (selectedLevelStats.value.review + selectedLevelStats.value.strengthen) === 0
-  const done = Number(gameDone) + Number(reviewDone)
-  const total = 2
-  return {
-    gameDone,
-    reviewDone,
-    done,
-    total,
-    percent: (done / total) * 100,
-  }
-})
-
-const dailyTaskStatus = computed(() => {
-  const progress = dailyTaskProgress.value
-
-  if (progress.done === progress.total) {
-    return {
-      emoji: '🎉',
-      title: '今天的任务完成了',
-      description: '今天已经练过，而且当前关卡该复习的内容也处理得不错，可以轻松收工。',
-    }
-  }
-
-  if (progress.gameDone) {
-    return {
-      emoji: '💪',
-      title: '再冲一下推荐练习',
-      description: '今天已经完成打卡了，再把当前关卡的推荐内容处理掉，今天就很完整。',
-    }
-  }
-
-  return {
-    emoji: '🚀',
-    title: '今天先完成 1 局',
-    description: `先开始一局 ${selectedLevelMeta.value?.name || '当前关卡'} 练习，打卡和今日任务都会一起推进。`,
-  }
 })
 
 function selectLevel(level) {
@@ -435,12 +243,6 @@ function selectLevel(level) {
   trackEvent('level_selected', { level: level.key })
 }
 
-function goNextLevelFromHome() {
-  if (!nextLevel.value) return
-  appState.value = saveAppState({ selectedLevel: nextLevel.value.key })
-  trackEvent('next_level_click', { from: selectedLevel.value, to: nextLevel.value.key, source: 'home' })
-}
-
 function startGame(mode) {
   trackEvent('start_game_click', { mode, level: selectedLevel.value })
   router.push({ path: '/game', query: { level: selectedLevel.value, mode } })
@@ -450,6 +252,11 @@ function goParent() {
   showPasswordModal.value = false
   trackEvent('open_parent_center')
   router.push('/parent')
+}
+
+function goToPricing() {
+  trackEvent('pricing_click', { source: 'home' })
+  router.push('/pricing')
 }
 
 async function handleSignOut() {
@@ -472,22 +279,6 @@ function finishOnboarding() {
 function openAuthModal() {
   showAuth.value = true
   trackEvent('auth_modal_open')
-}
-
-function handleCheckout() {
-  trackEvent('checkout_click', {
-    hasCheckout: hasCheckoutLink.value,
-    level: selectedLevel.value,
-    loggedIn: isLoggedIn.value,
-  })
-
-  if (!hasCheckoutLink.value) {
-    errorMsg.value = '还没配置支付链接，请先补 VITE_CHECKOUT_URL'
-    setTimeout(() => { errorMsg.value = '' }, 2500)
-    return
-  }
-
-  window.open(pricing.value.checkoutUrl, '_blank', 'noopener,noreferrer')
 }
 
 async function refreshCloudData() {
