@@ -89,7 +89,7 @@ const errorMessage = ref('')
 
 // API 基础 URL
 const API_BASE_URL = import.meta.env.PROD 
-  ? 'https://recognize-chinese-characters-api.your-subdomain.workers.dev'
+  ? 'https://recognize-chinese-characters-api.weilailai2026.workers.dev'
   : 'http://localhost:8787'
 
 onMounted(async () => {

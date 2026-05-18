@@ -183,7 +183,7 @@ const selectedPlan = ref(null)
 
 // API 基础 URL（根据环境切换）
 const API_BASE_URL = import.meta.env.PROD 
-  ? 'https://recognize-chinese-characters-api.your-subdomain.workers.dev'
+  ? 'https://recognize-chinese-characters-api.weilailai2026.workers.dev'
   : 'http://localhost:8787'
 
 // 选择套餐并创建订单
